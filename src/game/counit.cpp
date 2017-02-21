@@ -19,6 +19,7 @@ CLASS_EQUIP_CPP(CoUnit);
 
 CoUnit::CoUnit() :
 	m_current_level(nullptr),
+	m_unit_shader(nullptr),
     m_state(eUnitState::Run),
     m_speed(1.f),
     m_speed_lateral(0.1f),
@@ -39,21 +40,25 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
 	Super::Create( owner, proto );
 
 	json::TokenIdx ent_tok = proto->GetToken( "entity", json::OBJECT );
-	json::TokenIdx ship_tok = proto->GetToken( "Ship", json::OBJECT, ent_tok );
-	if( ship_tok != INDEX_NONE )
+	json::TokenIdx unit_tok = proto->GetToken( "unit", json::OBJECT, ent_tok );
+	if(unit_tok != INDEX_NONE )
 	{
-		json::TokenIdx param_tok = proto->GetToken( "speed", json::PRIMITIVE, ship_tok );
-		if( param_tok != INDEX_NONE )
-			m_speed = proto->GetFloatValue( param_tok, m_speed );
-        param_tok = proto->GetToken( "cam_zoffset", json::PRIMITIVE, ship_tok );
-        if( param_tok != INDEX_NONE )
-            m_cam_zoffset = proto->GetFloatValue( param_tok, m_cam_zoffset );
-        param_tok = proto->GetToken( "ship_scale", json::PRIMITIVE, ship_tok );
-        if( param_tok != INDEX_NONE )
-            m_unit_scale = proto->GetFloatValue( param_tok, m_unit_scale );
-        param_tok = proto->GetToken( "move_range", json::PRIMITIVE, ship_tok );
-        if( param_tok != INDEX_NONE )
-            m_move_range = proto->GetFloatValue( param_tok, m_move_range );
+		json::TokenIdx shader_tok = proto->GetToken( "speed", json::STRING, unit_tok);
+		if (shader_tok != INDEX_NONE)
+		{
+			String str_shader("");
+			proto->GetStringValue(shader_tok, str_shader);
+			m_unit_shader = GfxManager::GetStaticInstance()->LoadShader(str_shader);
+		}
+        //param_tok = proto->GetToken( "cam_zoffset", json::PRIMITIVE, unit_tok);
+        //if( param_tok != INDEX_NONE )
+        //    m_cam_zoffset = proto->GetFloatValue( param_tok, m_cam_zoffset );
+        //param_tok = proto->GetToken( "ship_scale", json::PRIMITIVE, unit_tok);
+        //if( param_tok != INDEX_NONE )
+        //    m_unit_scale = proto->GetFloatValue( param_tok, m_unit_scale );
+        //param_tok = proto->GetToken( "move_range", json::PRIMITIVE, unit_tok);
+        //if( param_tok != INDEX_NONE )
+        //    m_move_range = proto->GetFloatValue( param_tok, m_move_range );
 	}
     
 }

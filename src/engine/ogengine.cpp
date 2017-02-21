@@ -7,16 +7,13 @@
 #include "engine/controller.h"
 #include "engine/coposition.h"
 //#include "ui/uimanager.h"
-//#include "../engine/copath.h"
-//#include "../engine/pathmanager.h"
-//#include "../game/coship.h"
-//#include "../game/shipmanager.h"
+#include "../game/counit.h"
+#include "../game/unitmanager.h"
 #include "../game/colevel.h"
 #include "../game/ogworld.h"
 #include "../pacman/copmlevel.h"
 //#include "../engine/dfmanager.h"
 #include "../engine/ogcamera.h"
-//#include "../editor/fseditor.h"
 
 OGEngine* OGEngine::ms_pengine = nullptr;
 
@@ -49,12 +46,13 @@ bool OGEngine::Init(EngineInitParams const& init_params)
 	Entity* pac_level = EntityManager::GetStaticInstance()->CreateEntityFromJson( "../data/pacman/level.json", "Level_0" );
 	EntityManager::GetStaticInstance()->AddEntityToWorld( pac_level );
 
+	Entity* pac_man = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/pacman.json", "Pacman_0");
+	EntityManager::GetStaticInstance()->AddEntityToWorld(pac_man);
 
 	Entity* ent_camera = EntityManager::GetStaticInstance()->CreateEntityFromJson( "../data/defaultcamera.json" );
 	EntityManager::GetStaticInstance()->AddEntityToWorld( ent_camera );
 	if( ent_camera->IsA( Camera::StaticClass() ) )
 	{
-#if 1
 		float cam_dist = 10.0;
 		Camera* camera = static_cast<Camera*>( ent_camera );
 		camera->SetPosition( dvec3(0.f, 0.f, -cam_dist) );
@@ -66,7 +64,6 @@ bool OGEngine::Init(EngineInitParams const& init_params)
         // Up
         cam_rot.v1 = vec3(0.f, -1.f, 0.f);
         camera->SetRotation( quat(cam_rot) );
-#endif
 	}
 
 
@@ -101,11 +98,12 @@ void OGEngine::DeclareComponentsAndEntities()
 	Super::DeclareComponentsAndEntities();
 
 	//DECLARE_COMPONENT_MGR( CoPath, PathManager );
-	//DECLARE_COMPONENT_MGR( CoShip, ShipManager );
+	DECLARE_COMPONENT_MGR( CoUnit, UnitManager );
     DECLARE_COMPONENT_MGR( CoPmLevel, OGWorld );
 	//DECLARE_COMPONENT( CoPath );
 	//DECLARE_ENTITYPATTERN( Ship, Entity, (2, "CoPosition", "CoShip"), (0) );
 	DECLARE_ENTITYPATTERN( PacLevel, Entity, (2, "CoPosition", "CoPmLevel"), (0) );
+	DECLARE_ENTITYPATTERN( PacUnit, Entity, (2, "CoPosition", "CoUnit"), (0));
 }
 
 void OGEngine::CreateGameCameras()

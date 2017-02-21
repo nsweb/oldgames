@@ -1,0 +1,9 @@
+
+"entity": 
+{
+	"pattern" : "PacUnit",
+	"unit": 
+	{
+		"shader": "pacman"
+	}
+}
