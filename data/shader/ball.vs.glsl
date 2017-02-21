@@ -20,7 +20,7 @@ void main(void)
 {
     float y = 0.25 + float (gl_InstanceID / tile_dim_x);
     float x = 0.25 + float (gl_InstanceID % tile_dim_x);
-    float z = -0.1;
+    float z = -0.01;
     vec4 position = vec4(pos.x + x, pos.y + y, pos.z + z, pos.w);
     
     gl_Position = proj_mat * (view_mat * (world_mat * position));

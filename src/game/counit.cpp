@@ -19,7 +19,7 @@ CLASS_EQUIP_CPP(CoUnit);
 
 CoUnit::CoUnit() :
 	m_current_level(nullptr),
-	m_unit_shader(nullptr),
+	m_shader(nullptr),
     m_state(eUnitState::Run),
     m_speed(1.f),
     m_speed_lateral(0.1f),
@@ -43,12 +43,12 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
 	json::TokenIdx unit_tok = proto->GetToken( "unit", json::OBJECT, ent_tok );
 	if(unit_tok != INDEX_NONE )
 	{
-		json::TokenIdx shader_tok = proto->GetToken( "speed", json::STRING, unit_tok);
+		json::TokenIdx shader_tok = proto->GetToken( "shader", json::STRING, unit_tok);
 		if (shader_tok != INDEX_NONE)
 		{
 			String str_shader("");
 			proto->GetStringValue(shader_tok, str_shader);
-			m_unit_shader = GfxManager::GetStaticInstance()->LoadShader(str_shader);
+			m_shader = GfxManager::GetStaticInstance()->LoadShader(str_shader);
 		}
         //param_tok = proto->GetToken( "cam_zoffset", json::PRIMITIVE, unit_tok);
         //if( param_tok != INDEX_NONE )
@@ -59,7 +59,35 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
         //param_tok = proto->GetToken( "move_range", json::PRIMITIVE, unit_tok);
         //if( param_tok != INDEX_NONE )
         //    m_move_range = proto->GetFloatValue( param_tok, m_move_range );
+        
 	}
+    
+    if(m_shader)
+    {
+        glGenVertexArrays( eVACount, m_varrays );
+        glGenBuffers( eVBCount, m_vbuffers );
+        
+        // unit quad
+        const vec2 unit_vertices[] = { vec2(0.f,0.f), vec2(1.f,0.f), vec2(1.f,1.f), vec2(0.f,1.f) };
+        GLuint idx_data[] = {
+            0,2,1, 0,3,2
+        };
+        
+        glBindVertexArray( m_varrays[eVAUnit] );
+        {
+            glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBUnitElt] );
+            glBufferData( GL_ELEMENT_ARRAY_BUFFER, COUNT_OF(idx_data) * sizeof(GLuint), idx_data, GL_STATIC_DRAW );
+            
+            glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBUnit] );
+            glBufferData( GL_ARRAY_BUFFER, COUNT_OF(unit_vertices) * sizeof(vec2), unit_vertices, GL_STATIC_DRAW );
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2) /*stride*/, (void*)0 /*offset*/ );
+            
+            glBindVertexArray(0);
+            for( int attrib_idx = 0; attrib_idx < 8; attrib_idx++)
+                glDisableVertexAttribArray( attrib_idx);
+        }
+    }
     
 }
 
@@ -94,9 +122,10 @@ bool CoUnit::OnControllerInput( Camera* camera, ControllerInput const& input )
 
 void CoUnit::_Render( RenderContext& render_ctxt )
 {
-#if 0
-	static float global_time = 0.f;
-	global_time += render_ctxt.m_delta_seconds;
+    if(!m_shader)
+        return;
+	//static float global_time = 0.f;
+	//global_time += render_ctxt.m_delta_seconds;
 
 	transform cam2world_transform( render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale() );
 
@@ -104,18 +133,9 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 	mat4 view_inv_mat( cam2world_transform.GetRotation(), cam2world_transform.GetTranslation(), cam2world_transform.GetScale() );
 
 	CoPosition* ppos = static_cast<CoPosition*>( GetEntityComponent( CoPosition::StaticClass() ) );
-	transform ship2cam_transform = ppos->GetTransform();	// relative to cam
-	transform ship_transform = cam2world_transform * ship2cam_transform;
-	mat4 world_mat( ship_transform.GetRotation(), ship_transform.GetTranslation(), (float)ship_transform.GetScale() * m_ship_scale );
+    transform unit_transform = ppos->GetTransform();
+	mat4 world_mat( unit_transform.GetRotation(), unit_transform.GetTranslation(), (float)unit_transform.GetScale() );
 	mat4 view_mat = bigball::inverse(view_inv_mat);
-	mat4 world_view_mat = view_mat * world_mat;
-	static float coll_threshold = 0.05f;
-	float collision_dist = clamp(m_current_collision_dist / coll_threshold, 0.0f, 1.0f);
-
-	// Draw reverse faces, so that we can still display something inside cube
-	glCullFace(GL_FRONT);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	m_shader->Bind();
 	{
@@ -125,17 +145,19 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 		m_shader->SetUniform( uni_view, view_mat );
 		ShaderUniform uni_proj = m_shader->GetUniformLocation("proj_mat");
 		m_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
-		ShaderUniform uni_vtb = m_shader->GetUniformLocation("viewtobox_mat");
+		/*ShaderUniform uni_vtb = m_shader->GetUniformLocation("viewtobox_mat");
 		m_shader->SetUniform( uni_vtb, bigball::inverse(world_view_mat) );
 		ShaderUniform uni_cdist = m_shader->GetUniformLocation("collision_dist");
-		m_shader->SetUniform(uni_cdist, collision_dist);
+		m_shader->SetUniform(uni_cdist, collision_dist);*/
 		
-		DFManager::GetStaticInstance()->DrawCube();
+        glBindVertexArray( m_varrays[eVAUnit] );
+        
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        
+        glBindVertexArray(0);
 	}
 	m_shader->Unbind();
 
-	glCullFace(GL_BACK);
-#endif // 0
 }
 
 void CoUnit::ChangeState( eUnitState new_state )

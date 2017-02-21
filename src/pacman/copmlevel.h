@@ -56,7 +56,7 @@ public:
 	virtual void		AddToWorld() override;
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt ) override;
-	virtual void		_Render( RenderContext& render_ctxt );
+	virtual void		_Render( RenderContext& render_ctxt ) override;
 
     PmTile&             GetTile(int i, int j)   { return m_tiles[m_tile_dim.x * j + i]; }
 

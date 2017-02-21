@@ -45,7 +45,7 @@ public:
 
 public:
 	Entity*		m_current_level;
-	Shader*     m_unit_shader;
+	Shader*     m_shader;
 
     eUnitState  m_state;
 
@@ -55,6 +55,22 @@ public:
     float       m_cam_zoffset;
     float       m_unit_scale;
     float       m_move_range;
+    
+    enum eVAType
+    {
+        eVAUnit = 0,
+        eVACount
+    };
+    enum eVBType
+    {
+        eVBUnit = 0,
+        eVBUnitElt,
+        eVBCount
+    };
+    
+    // rendering stuff
+    GLuint		m_varrays[eVACount];
+    GLuint		m_vbuffers[eVBCount];
 };
 
 #endif // OGCOUNIT_H

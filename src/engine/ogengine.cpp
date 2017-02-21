@@ -121,18 +121,10 @@ void OGEngine::InitManagers()
     OGWorld* pworld = new OGWorld();
     pworld->Create();
     m_managers.push_back( pworld );
-
-	//PathManager* ppath_manager = new PathManager();
-	//ppath_manager->Create();
-	//m_managers.push_back( ppath_manager );
-
-    /*DFManager* pdf_manager = new DFManager();
-    pdf_manager->Create();
-    m_managers.push_back( pdf_manager );
     
-    ShipManager* pship_manager = new ShipManager();
-    pship_manager->Create();
-    m_managers.push_back( pship_manager );*/
+    UnitManager* unit_manager = new UnitManager();
+    unit_manager->Create();
+    m_managers.push_back( unit_manager );
 }
 
 void OGEngine::DestroyManagers()

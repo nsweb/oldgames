@@ -12,6 +12,8 @@ out vec2 vs_fs_coord;
 
 void main(void)
 {
-    gl_Position = proj_mat * (view_mat * (world_mat * pos));
+    vec4 position = pos;
+    position.z = -0.02;
+    gl_Position = proj_mat * (view_mat * (world_mat * position));
     vs_fs_coord = pos.xy;
 }
