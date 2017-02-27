@@ -3,7 +3,7 @@
 #include "ogcamera.h"
 #include "engine/coposition.h"
 #include "engine/controller.h"
-//#include "../game/coship.h"
+#include "../game/colevel.h"
 
 
 
@@ -11,7 +11,7 @@ CLASS_EQUIP_CPP(OGCameraCtrl_2D);
 //CLASS_EQUIP_CPP(FSCameraCtrl_EditPath);
 
 OGCameraCtrl_2D::OGCameraCtrl_2D() :
-	m_ptarget(nullptr)
+	m_level(nullptr)
 {
 
 }
@@ -25,23 +25,52 @@ void OGCameraCtrl_2D::UpdateView( CameraView& cam_view, float delta_seconds )
 
 bool OGCameraCtrl_2D::OnControllerInput( Camera* camera, ControllerInput const& input )
 {
-    //CameraView& cam_view = camera->GetView();
-    
-    
     if( input.m_type == eCIT_Key )
     {
-        mat4 cam_to_world( camera->GetRotation() );
-        vec3 right = cam_to_world.v0.xyz;
-        vec3 up = cam_to_world.v1.xyz;
-        vec3 front = -cam_to_world.v2.xyz;
-        
-        static float strafe_speed = 20.f;
-        vec3 cam_pos = camera->GetPosition();
-        cam_pos += (right * input.m_delta.x + up * input.m_delta.z + front * input.m_delta.y) * strafe_speed;
-        camera->SetPosition(cam_pos);
+        if (m_level)
+        {
+            m_level->OnControllerInput(camera, input);
+        }
+        else
+        {
+            mat4 cam_to_world( camera->GetRotation() );
+            vec3 right = cam_to_world.v0.xyz;
+            vec3 up = cam_to_world.v1.xyz;
+            vec3 front = -cam_to_world.v2.xyz;
+            
+            static float strafe_speed = 20.f;
+            vec3 cam_pos = camera->GetPosition();
+            cam_pos += (right * input.m_delta.x + up * input.m_delta.z + front * input.m_delta.y) * strafe_speed;
+            camera->SetPosition(cam_pos);
+        }
     }
     
 	return Super::OnControllerInput( camera, input );
+}
+
+void OGCameraCtrl_2D::OnLevelReset( CoLevel* level )
+{
+    m_level = level;
+    if(!level)
+        return;
+    
+    // center camera
+    vec2 bmin, bmax;
+    level->GetLevelBounds(bmin, bmax);
+    
+    Camera* camera = Controller::GetStaticInstance()->GetActiveCamera();
+    if(!camera)
+        return;
+    
+    CameraView& view = camera->GetView();
+    float fov_h = view.m_parameters[eCP_FOV] * (F_PI / 180.0f);
+    float level_width = bmax.x - bmin.x;
+    float cam_height = level_width * 0.5f / tan(fov_h * 0.5f);
+    
+    vec3 cam_pos;
+    cam_pos.xy = (bmin + bmax) * 0.5f;
+    cam_pos.z = -cam_height;
+    camera->SetPosition(cam_pos);
 }
 
 

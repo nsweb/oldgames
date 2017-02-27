@@ -1,6 +1,10 @@
 
 "world":
 {
-  "levels": ["mbox", "mbox2"]
+	"pacman":
+	{
+		"hero" : "pacman",
+		"levels": ["level"]
+	}
 }
 

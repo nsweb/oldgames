@@ -5,9 +5,11 @@
 
 #include "engine/camera.h"
 
+class CoLevel;
+
 //////////////////////////////////////////////////////////////////////////
 
-class BIGBALL_API OGCameraCtrl_2D : public CameraCtrl_Base
+class OGCameraCtrl_2D : public CameraCtrl_Base
 {
 	CLASS_EQUIP_H(OGCameraCtrl_2D, CameraCtrl_Base)
 
@@ -20,10 +22,10 @@ public:
 public:
 	virtual void		UpdateView( CameraView& cam_view, float delta_seconds ) override;
 	virtual bool		OnControllerInput( Camera* pcamera, struct ControllerInput const& input ) override;
-	void				SetTarget( Entity* ptarget )		{ m_ptarget = ptarget; }
+    void				OnLevelReset( CoLevel* level );
 
 protected:
-	Entity*			m_ptarget;
+	CoLevel*			m_level;
 };
 
 #if 0

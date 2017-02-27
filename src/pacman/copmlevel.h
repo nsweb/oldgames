@@ -57,6 +57,10 @@ public:
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt ) override;
 	virtual void		_Render( RenderContext& render_ctxt ) override;
+    virtual void        GetLevelBounds(vec2& bmin, vec2& bmax) const override;
+    
+    virtual void        BeginPlay() override;
+    virtual void        OnControllerInput( Camera* camera, ControllerInput const& input ) override;
 
     PmTile&             GetTile(int i, int j)   { return m_tiles[m_tile_dim.x * j + i]; }
 

@@ -124,8 +124,9 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 {
     if(!m_shader)
         return;
-	//static float global_time = 0.f;
-	//global_time += render_ctxt.m_delta_seconds;
+	
+    static float global_time = 0.f;
+	global_time += render_ctxt.m_delta_seconds;
 
 	transform cam2world_transform( render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale() );
 
@@ -145,6 +146,8 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 		m_shader->SetUniform( uni_view, view_mat );
 		ShaderUniform uni_proj = m_shader->GetUniformLocation("proj_mat");
 		m_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
+        ShaderUniform uni_time = m_shader->GetUniformLocation("time");
+        m_shader->SetUniform( uni_time, global_time );
 		/*ShaderUniform uni_vtb = m_shader->GetUniformLocation("viewtobox_mat");
 		m_shader->SetUniform( uni_vtb, bigball::inverse(world_view_mat) );
 		ShaderUniform uni_cdist = m_shader->GetUniformLocation("collision_dist");

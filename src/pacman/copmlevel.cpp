@@ -101,14 +101,41 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
 			m_speed = proto->GetFloatValue( ParamTok, m_speed );
 	}*/
     
-#if 1
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileWall]);
     glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_walls.size() * sizeof(PmDrawTileWall), (GLvoid*)m_tile_draw_walls.Data(), GL_STATIC_DRAW );
-#endif
+
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall]);
     glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_balls.size() * sizeof(PmDrawTileBall), (GLvoid*)m_tile_draw_balls.Data(), GL_STATIC_DRAW );
 }
+
+void CoPmLevel::GetLevelBounds(vec2& bmin, vec2& bmax) const
+{
+    bmin = vec2(0.f,0.f);
+    bmax = vec2(m_tile_dim.x, m_tile_dim.y);
+}
+
+void CoPmLevel::BeginPlay()
+{
     
+}
+
+void CoPmLevel::OnControllerInput( Camera* camera, ControllerInput const& input )
+{
+    if (m_hero)
+    {
+        CoPosition* copos = static_cast<CoPosition*>( m_hero->GetComponent("CoPosition") );
+        if (copos)
+        {
+            static float strafe_speed = 1.f;
+            vec3 hero_pos = copos->GetPosition();
+            vec3 right(1.0f, 0.0f, 0.0f);
+            vec3 down(0.0f, 1.0f, 0.0f);
+            hero_pos += (right * input.m_delta.x + down * -input.m_delta.y) * strafe_speed;
+            copos->SetPosition(hero_pos);
+        }
+    }
+}
+
 
 void CoPmLevel::Destroy()
 {
@@ -226,7 +253,6 @@ void CoPmLevel::CreateBuffers()
         0,2,1, 0,3,2
     };
     
-#if 1
     glBindVertexArray( m_varrays[eVATiles] );
     {
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBTileElt] );
@@ -269,7 +295,6 @@ void CoPmLevel::CreateBuffers()
         for( int attrib_idx = 0; attrib_idx < 8; attrib_idx++)
             glDisableVertexAttribArray( attrib_idx);
     }
-#endif
     
     glBindVertexArray( m_varrays[eVABalls] );
     {

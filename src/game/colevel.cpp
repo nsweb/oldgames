@@ -15,7 +15,8 @@
 
 CLASS_EQUIP_CPP(CoLevel);
 
-CoLevel::CoLevel()
+CoLevel::CoLevel() :
+    m_hero(nullptr)
 {
 
 }

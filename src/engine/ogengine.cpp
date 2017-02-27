@@ -31,23 +31,12 @@ bool OGEngine::Init(EngineInitParams const& init_params)
 {
 	bool bInit = Engine::Init(init_params);
     
-    //////////////////////////////////////////////////////////////////////////
-	//m_peditor = new FSEditor();
-	//m_peditor->Init();
-
-
 	//////////////////////////////////////////////////////////////////////////
 	// Scene description
-    //FSWorld::GetStaticInstance()->InitLevels( "../data/world.json" );
-    
-	//Entity* pship = EntityManager::GetStaticInstance()->CreateEntityFromJson( "../data/ship.json", "Ship" );
-	//EntityManager::GetStaticInstance()->AddEntityToWorld( pship );
-
-	Entity* pac_level = EntityManager::GetStaticInstance()->CreateEntityFromJson( "../data/pacman/level.json", "Level_0" );
-	EntityManager::GetStaticInstance()->AddEntityToWorld( pac_level );
-
-	Entity* pac_man = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/pacman.json", "Pacman_0");
-	EntityManager::GetStaticInstance()->AddEntityToWorld(pac_man);
+    OGWorld::GetStaticInstance()->InitLevels( "../data/world.json" );
+	
+    /*Entity* hero = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/pacman.json", "Pacman_0");
+    EntityManager::GetStaticInstance()->AddEntityToWorld(hero);*/
 
 	Entity* ent_camera = EntityManager::GetStaticInstance()->CreateEntityFromJson( "../data/defaultcamera.json" );
 	EntityManager::GetStaticInstance()->AddEntityToWorld( ent_camera );
@@ -64,18 +53,18 @@ bool OGEngine::Init(EngineInitParams const& init_params)
         // Up
         cam_rot.v1 = vec3(0.f, -1.f, 0.f);
         camera->SetRotation( quat(cam_rot) );
+        
+        Controller::GetStaticInstance()->SetActiveCamera(camera);
 	}
 
 
 	// Link scene objects
-	CameraCtrl_Base* cam_ctrl = Controller::GetStaticInstance()->GetCameraCtrl( OGCameraCtrl_2D::StaticClass() );
-	//if( cam_ctrl && cam_ctrl->IsA( FSCameraCtrl_Fly::StaticClass() ) )
-	//	((FSCameraCtrl_Fly*)cam_ctrl)->SetTarget( pship );
-
-    CoLevel* level = OGWorld::GetStaticInstance()->GetCurrentLevel();
-	//CoShip* pcoship = static_cast<CoShip*>( pship->GetComponent( CoShip::StaticClass() ) );
-	//if( pcoship )
-	//	pcoship->SetCurrentLevel( level->GetEntity() );
+	CoLevel* level = OGWorld::GetStaticInstance()->GetCurrentLevel();
+    level->BeginPlay();
+    
+    CameraCtrl_Base* cam_ctrl = Controller::GetStaticInstance()->GetCameraCtrl( OGCameraCtrl_2D::StaticClass() );
+	if( cam_ctrl && cam_ctrl->IsA( OGCameraCtrl_2D::StaticClass() ) )
+		((OGCameraCtrl_2D*)cam_ctrl)->OnLevelReset(level);
 
 	return bInit;
 }

@@ -48,19 +48,40 @@ bool OGWorld::InitLevels( char const* json_path )
     }
     
     json::TokenIdx wtok = jsn_obj.GetToken( "world", json::OBJECT );
-    json::TokenIdx ltok = jsn_obj.GetToken( "levels", json::ARRAY, wtok );
-    int level_count = jsn_obj.GetArraySize( ltok );
-    
-    for( int level_idx = 0; level_idx < level_count; level_idx++ )
+    const char* game_names[] = { "pacman"};
+    for( int game_idx = 0; game_idx < COUNT_OF(game_names); game_idx++ )
     {
-        String level_name;
-        jsn_obj.GetArrayStringValue( ltok, level_idx, level_name );
+        json::TokenIdx gtok = jsn_obj.GetToken( game_names[game_idx], json::OBJECT, wtok );
         
-        String level_path = String::Printf("../data/level/%s/", level_name.c_str());
-        String level_json = level_path + "level.json";
-        Entity* plevel = EntityManager::GetStaticInstance()->CreateEntityFromJson( level_json.c_str(), level_name.c_str() );
-        if( plevel )
-            EntityManager::GetStaticInstance()->AddEntityToWorld( plevel );
+        json::TokenIdx htok = jsn_obj.GetToken( "hero", json::STRING, gtok );
+        Entity* hero = nullptr;
+        String hero_name = "";
+        if (jsn_obj.GetStringValue(htok, hero_name))
+        {
+            String hero_json = String::Printf("../data/%s/%s.json", game_names[game_idx], hero_name.c_str());
+            hero = EntityManager::GetStaticInstance()->CreateEntityFromJson( hero_json.c_str(), hero_name.c_str());
+            if (hero)
+                EntityManager::GetStaticInstance()->AddEntityToWorld(hero);
+        }
+        
+        json::TokenIdx ltok = jsn_obj.GetToken( "levels", json::ARRAY, gtok );
+        int level_count = jsn_obj.GetArraySize( ltok );
+        
+        for( int level_idx = 0; level_idx < level_count; level_idx++ )
+        {
+            String level_name;
+            jsn_obj.GetArrayStringValue( ltok, level_idx, level_name );
+            
+            String level_json = String::Printf("../data/%s/%s.json", game_names[game_idx], level_name.c_str());
+            Entity* level = EntityManager::GetStaticInstance()->CreateEntityFromJson( level_json.c_str(), level_name.c_str() );
+            if( level )
+            {
+                EntityManager::GetStaticInstance()->AddEntityToWorld( level );
+                CoLevel* colevel = static_cast<CoLevel*>( level->GetCompatibleComponent("CoLevel") );
+                if (colevel)
+                    colevel->SetHero(hero);
+            }
+        }
     }
     
     if( m_levels.size() )
