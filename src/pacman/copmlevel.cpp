@@ -13,6 +13,7 @@
 #include "gfx/shader.h"
 #include "gfx/rendercontext.h"
 #include "gfx/drawutils.h"
+#include "copmunit.h"
 
 CLASS_EQUIP_CPP(CoPmLevel);
 
@@ -111,31 +112,35 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
 void CoPmLevel::GetLevelBounds(vec2& bmin, vec2& bmax) const
 {
     bmin = vec2(0.f,0.f);
-    bmax = vec2(m_tile_dim.x, m_tile_dim.y);
+    bmax = vec2((float)m_tile_dim.x, (float)m_tile_dim.y);
+}
+
+PmTile& CoPmLevel::GetTile(vec2 pos)
+{
+	int i = bigball::clamp((int)pos.x, 0, m_tile_dim.x - 1);
+	int j = bigball::clamp((int)pos.y, 0, m_tile_dim.y - 1);
+	return GetTile(i, j);
 }
 
 void CoPmLevel::BeginPlay()
 {
-    
+    // reset pacman pos
+	CoPosition* copos = static_cast<CoPosition*>(m_hero->GetComponent("CoPosition"));
+	if (copos)
+	{
+		// top left corner
+		copos->SetPosition(vec3(0, 0, 0));
+	}
 }
 
 void CoPmLevel::OnControllerInput( Camera* camera, ControllerInput const& input )
 {
     if (m_hero)
     {
-        CoPosition* copos = static_cast<CoPosition*>( m_hero->GetComponent("CoPosition") );
-        if (copos)
-        {
-            static float strafe_speed = 1.f;
-            vec3 hero_pos = copos->GetPosition();
-            vec3 right(1.0f, 0.0f, 0.0f);
-            vec3 down(0.0f, 1.0f, 0.0f);
-            hero_pos += (right * input.m_delta.x + down * -input.m_delta.y) * strafe_speed;
-            copos->SetPosition(hero_pos);
-        }
+		CoPmUnit* unit = static_cast<CoPmUnit*>( m_hero->GetComponent("CoPmUnit") );
+		unit->OnControllerInput(input, this);
     }
 }
-
 
 void CoPmLevel::Destroy()
 {

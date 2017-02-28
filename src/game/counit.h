@@ -38,10 +38,9 @@ public:
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick( TickContext& tick_ctxt );
 	void				_Render( RenderContext& render_ctxt );
-    bool                OnControllerInput( Camera* camera, ControllerInput const& input );
 
-    void				SetCurrentLevel( Entity* current_level );
-    void                ChangeState( eUnitState new_state );
+	void				ChangeState(eUnitState new_state);
+	void				SetCurrentLevel(Entity* current_level);
 
 public:
 	Entity*		m_current_level;
@@ -51,10 +50,6 @@ public:
 
     /** Prototype parameters */
     float       m_speed;
-    float       m_speed_lateral;
-    float       m_cam_zoffset;
-    float       m_unit_scale;
-    float       m_move_range;
     
     enum eVAType
     {

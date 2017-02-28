@@ -7,12 +7,11 @@
 #include "engine/controller.h"
 #include "engine/coposition.h"
 //#include "ui/uimanager.h"
-#include "../game/counit.h"
 #include "../game/unitmanager.h"
 #include "../game/colevel.h"
 #include "../game/ogworld.h"
 #include "../pacman/copmlevel.h"
-//#include "../engine/dfmanager.h"
+#include "../pacman/copmunit.h"
 #include "../engine/ogcamera.h"
 
 OGEngine* OGEngine::ms_pengine = nullptr;
@@ -35,9 +34,6 @@ bool OGEngine::Init(EngineInitParams const& init_params)
 	// Scene description
     OGWorld::GetStaticInstance()->InitLevels( "../data/world.json" );
 	
-    /*Entity* hero = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/pacman.json", "Pacman_0");
-    EntityManager::GetStaticInstance()->AddEntityToWorld(hero);*/
-
 	Entity* ent_camera = EntityManager::GetStaticInstance()->CreateEntityFromJson( "../data/defaultcamera.json" );
 	EntityManager::GetStaticInstance()->AddEntityToWorld( ent_camera );
 	if( ent_camera->IsA( Camera::StaticClass() ) )
@@ -71,9 +67,6 @@ bool OGEngine::Init(EngineInitParams const& init_params)
 
 void OGEngine::Shutdown()
 {
-	//m_peditor->Shutdown();
-	//BB_DELETE( m_peditor );
-
 	Engine::Shutdown();
 }
 
@@ -86,20 +79,17 @@ void OGEngine::DeclareComponentsAndEntities()
 {
 	Super::DeclareComponentsAndEntities();
 
-	//DECLARE_COMPONENT_MGR( CoPath, PathManager );
+	DECLARE_COMPONENT_MGR(CoPmUnit, UnitManager);
 	DECLARE_COMPONENT_MGR( CoUnit, UnitManager );
     DECLARE_COMPONENT_MGR( CoPmLevel, OGWorld );
-	//DECLARE_COMPONENT( CoPath );
-	//DECLARE_ENTITYPATTERN( Ship, Entity, (2, "CoPosition", "CoShip"), (0) );
 	DECLARE_ENTITYPATTERN( PacLevel, Entity, (2, "CoPosition", "CoPmLevel"), (0) );
-	DECLARE_ENTITYPATTERN( PacUnit, Entity, (2, "CoPosition", "CoUnit"), (0));
+	DECLARE_ENTITYPATTERN( PacUnit, Entity, (2, "CoPosition", "CoPmUnit"), (0));
 }
 
 void OGEngine::CreateGameCameras()
 {
 	Controller* pController = Controller::GetStaticInstance();
 	pController->RegisterCameraCtrl( new OGCameraCtrl_2D() );
-	//pController->RegisterCameraCtrl( new FSCameraCtrl_EditPath() );
 	pController->SetActiveCameraCtrl( OGCameraCtrl_2D::StaticClass() );
 }
 

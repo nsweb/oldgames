@@ -21,11 +21,7 @@ CoUnit::CoUnit() :
 	m_current_level(nullptr),
 	m_shader(nullptr),
     m_state(eUnitState::Run),
-    m_speed(1.f),
-    m_speed_lateral(0.1f),
-    m_cam_zoffset(0.05f),
-    m_unit_scale(0.005f),
-    m_move_range(0.03f)
+    m_speed(1.f)
 {
 
 }
@@ -50,16 +46,10 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
 			proto->GetStringValue(shader_tok, str_shader);
 			m_shader = GfxManager::GetStaticInstance()->LoadShader(str_shader);
 		}
-        //param_tok = proto->GetToken( "cam_zoffset", json::PRIMITIVE, unit_tok);
-        //if( param_tok != INDEX_NONE )
-        //    m_cam_zoffset = proto->GetFloatValue( param_tok, m_cam_zoffset );
-        //param_tok = proto->GetToken( "ship_scale", json::PRIMITIVE, unit_tok);
-        //if( param_tok != INDEX_NONE )
-        //    m_unit_scale = proto->GetFloatValue( param_tok, m_unit_scale );
-        //param_tok = proto->GetToken( "move_range", json::PRIMITIVE, unit_tok);
-        //if( param_tok != INDEX_NONE )
-        //    m_move_range = proto->GetFloatValue( param_tok, m_move_range );
-        
+
+		json::TokenIdx param_tok = proto->GetToken( "speed", json::PRIMITIVE, unit_tok);
+        if( param_tok != INDEX_NONE )
+			m_speed = proto->GetFloatValue( param_tok, m_speed);        
 	}
     
     if(m_shader)
@@ -114,12 +104,6 @@ void CoUnit::Tick( TickContext& tick_ctxt )
 		return;
 }
 
-bool CoUnit::OnControllerInput( Camera* camera, ControllerInput const& input )
-{
-
-    return true;
-}
-
 void CoUnit::_Render( RenderContext& render_ctxt )
 {
     if(!m_shader)
@@ -129,8 +113,6 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 	global_time += render_ctxt.m_delta_seconds;
 
 	transform cam2world_transform( render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale() );
-
-	//vec3 cam_pos = cam2world_transform.GetTranslation();
 	mat4 view_inv_mat( cam2world_transform.GetRotation(), cam2world_transform.GetTranslation(), cam2world_transform.GetScale() );
 
 	CoPosition* ppos = static_cast<CoPosition*>( GetEntityComponent( CoPosition::StaticClass() ) );
@@ -148,10 +130,6 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 		m_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
         ShaderUniform uni_time = m_shader->GetUniformLocation("time");
         m_shader->SetUniform( uni_time, global_time );
-		/*ShaderUniform uni_vtb = m_shader->GetUniformLocation("viewtobox_mat");
-		m_shader->SetUniform( uni_vtb, bigball::inverse(world_view_mat) );
-		ShaderUniform uni_cdist = m_shader->GetUniformLocation("collision_dist");
-		m_shader->SetUniform(uni_cdist, collision_dist);*/
 		
         glBindVertexArray( m_varrays[eVAUnit] );
         
@@ -171,5 +149,4 @@ void CoUnit::ChangeState( eUnitState new_state )
 void CoUnit::SetCurrentLevel( Entity* current_level )
 {
     m_current_level = current_level;
-    
 }
