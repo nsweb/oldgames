@@ -63,7 +63,7 @@ public:
     virtual void        OnControllerInput( Camera* camera, ControllerInput const& input ) override;
 
     PmTile&             GetTile(int i, int j)   { return m_tiles[m_tile_dim.x * j + i]; }
-	PmTile&             GetTile(vec2 pos);
+	PmTile&             GetTile(vec2 pos, vec2& frac_xy);
 
 public:
     ivec2               m_tile_dim;

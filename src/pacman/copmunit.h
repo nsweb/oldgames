@@ -6,6 +6,8 @@
 
 #include "../game/counit.h"
 
+class CoPmLevel;
+
 class CoPmUnit : public CoUnit
 {
 	CLASS_EQUIP_H(CoPmUnit, CoUnit)
@@ -21,10 +23,14 @@ public:
 	virtual void		AddToWorld() override;
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick(TickContext& tick_ctxt) override;
-	void				OnControllerInput( ControllerInput const& input, class CoPmLevel* level);
+	void				OnControllerInput( ControllerInput const& input);
+    void                BeginPlay(CoPmLevel* level);
 
 public:
-	vec2	m_move_vector;
+    vec2        m_input_vector;
+	vec2        m_move_vector;
+    
+    CoPmLevel*  m_current_level;
 };
 
 #endif // OGCOPMUNIT_H

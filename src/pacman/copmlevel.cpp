@@ -115,22 +115,26 @@ void CoPmLevel::GetLevelBounds(vec2& bmin, vec2& bmax) const
     bmax = vec2((float)m_tile_dim.x, (float)m_tile_dim.y);
 }
 
-PmTile& CoPmLevel::GetTile(vec2 pos)
+PmTile& CoPmLevel::GetTile(vec2 pos, vec2& frac_xy)
 {
-	int i = bigball::clamp((int)pos.x, 0, m_tile_dim.x - 1);
-	int j = bigball::clamp((int)pos.y, 0, m_tile_dim.y - 1);
+    int ix = (int)pos.x;
+    int iy = (int)pos.y;
+    frac_xy = vec2(pos.x - (float)ix, pos.y - (float)iy);
+    
+	int i = bigball::clamp(ix, 0, m_tile_dim.x - 1);
+	int j = bigball::clamp(iy, 0, m_tile_dim.y - 1);
+    
 	return GetTile(i, j);
 }
 
 void CoPmLevel::BeginPlay()
 {
-    // reset pacman pos
-	CoPosition* copos = static_cast<CoPosition*>(m_hero->GetComponent("CoPosition"));
-	if (copos)
-	{
-		// top left corner
-		copos->SetPosition(vec3(0, 0, 0));
-	}
+    if (m_hero)
+    {
+        CoPmUnit* unit = static_cast<CoPmUnit*>( m_hero->GetComponent("CoPmUnit") );
+        unit->BeginPlay(this);
+    }
+
 }
 
 void CoPmLevel::OnControllerInput( Camera* camera, ControllerInput const& input )
@@ -138,7 +142,7 @@ void CoPmLevel::OnControllerInput( Camera* camera, ControllerInput const& input 
     if (m_hero)
     {
 		CoPmUnit* unit = static_cast<CoPmUnit*>( m_hero->GetComponent("CoPmUnit") );
-		unit->OnControllerInput(input, this);
+		unit->OnControllerInput(input);
     }
 }
 
