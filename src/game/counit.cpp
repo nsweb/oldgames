@@ -58,7 +58,7 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
         glGenBuffers( eVBCount, m_vbuffers );
         
         // unit quad
-        const vec2 unit_vertices[] = { vec2(0.f,0.f), vec2(1.f,0.f), vec2(1.f,1.f), vec2(0.f,1.f) };
+        const vec2 unit_vertices[] = { vec2(-0.5f,-0.5f), vec2(0.5f,-0.5f), vec2(0.5f,0.5f), vec2(-0.5f,0.5f) };
         GLuint idx_data[] = {
             0,2,1, 0,3,2
         };

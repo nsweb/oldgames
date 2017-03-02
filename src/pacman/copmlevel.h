@@ -17,7 +17,6 @@ namespace bigball
 
 struct PmTile
 {
-public:
     uint32	m_left  : 1;
     uint32	m_right : 1;
     uint32	m_up    : 1;
@@ -25,18 +24,19 @@ public:
     uint32  m_val   : 4;
 };
 
+struct PmTileBall
+{
+    uint8   m_big;
+    uint8   m_center;
+    uint8   m_right;
+    uint8   m_down;
+};
+
 struct PmDrawTileWall
 {
     uint8   m_left;
     uint8   m_right;
     uint8   m_up;
-    uint8   m_down;
-};
-struct PmDrawTileBall
-{
-    uint8   m_big;
-    uint8   m_center;
-    uint8   m_right;
     uint8   m_down;
 };
 
@@ -62,8 +62,11 @@ public:
     virtual void        BeginPlay() override;
     virtual void        OnControllerInput( Camera* camera, ControllerInput const& input ) override;
 
-    PmTile&             GetTile(int i, int j)   { return m_tiles[m_tile_dim.x * j + i]; }
-	PmTile&             GetTile(vec2 pos, vec2& frac_xy);
+    PmTile&             GetTile(int i, int j)       { return m_tiles[m_tile_dim.x * j + i]; }
+    PmTileBall&         GetTileBall(int i, int j)   { return m_tile_draw_balls[m_tile_dim.x * j + i]; }
+	ivec2               GetTileCoord(vec2 pos, vec2& frac_xy);
+    
+    void                NeedBallRedraw()            { m_need_ball_redraw = true; }
 
 public:
     ivec2               m_tile_dim;
@@ -86,11 +89,12 @@ public:
     
     // rendering stuff
     Array<PmDrawTileWall>   m_tile_draw_walls;
-    Array<PmDrawTileBall>   m_tile_draw_balls;
-    GLuint			m_varrays[eVACount];
-    GLuint			m_vbuffers[eVBCount];
-    Shader*         m_tile_shader;
-    Shader*         m_ball_shader;
+    Array<PmTileBall>       m_tile_draw_balls;
+    GLuint                  m_varrays[eVACount];
+    GLuint                  m_vbuffers[eVBCount];
+    Shader*                 m_tile_shader;
+    Shader*                 m_ball_shader;
+    bool                    m_need_ball_redraw;
     
     
     void                LoadShaders();

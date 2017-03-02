@@ -29,6 +29,7 @@ public:
 public:
     vec2        m_input_vector;
 	vec2        m_move_vector;
+    bool        m_hero;
     
     CoPmLevel*  m_current_level;
 };

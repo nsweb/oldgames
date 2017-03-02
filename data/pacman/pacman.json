@@ -4,6 +4,7 @@
 	"pattern" : "PacUnit",
 	"unit": 
 	{
-		"shader": "pacman"
+		"shader": "pacman",
+		"speed" : 2.0
 	}
 }

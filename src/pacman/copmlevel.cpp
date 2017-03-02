@@ -19,7 +19,8 @@ CLASS_EQUIP_CPP(CoPmLevel);
 
 CoPmLevel::CoPmLevel() :
     m_tile_shader(nullptr),
-    m_ball_shader(nullptr)
+    m_ball_shader(nullptr),
+    m_need_ball_redraw(false)
 {
 
 }
@@ -41,7 +42,7 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
     const char layout1[] =
         " - - - - - - "
         "|. . .|. . .|"
-        "   - - - -   "
+        "   -     -   "
         "|.|. . . .|.|"
         "     - -     "
         "|. .|. .|. .|"
@@ -50,7 +51,7 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         "   - - - -   "
         "|. . .|. . .|"
         "   - - - -   "
-        "|. . .|. . .|"
+        "|. . . . . .|"
         " - - - - - - ";
     ivec2 layout_dim = ivec2((m_tile_dim.x * 2 + 1), (m_tile_dim.y * 2 + 1));
     BB_ASSERT(sizeof(layout1) == (layout_dim.x * layout_dim.y + 1));
@@ -61,7 +62,7 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
     m_tile_draw_balls.reserve(m_tile_dim.x * m_tile_dim.y);
     m_tile_draw_balls.clear();
     PmDrawTileWall dtw;
-    PmDrawTileBall dtb;
+    PmTileBall dtb;
     for(int j = 0; j < m_tile_dim.y; j++)
     {
         int jL = 1 + 2*j;
@@ -106,7 +107,7 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
     glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_walls.size() * sizeof(PmDrawTileWall), (GLvoid*)m_tile_draw_walls.Data(), GL_STATIC_DRAW );
 
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall]);
-    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_balls.size() * sizeof(PmDrawTileBall), (GLvoid*)m_tile_draw_balls.Data(), GL_STATIC_DRAW );
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_draw_balls.Data(), GL_STATIC_DRAW );
 }
 
 void CoPmLevel::GetLevelBounds(vec2& bmin, vec2& bmax) const
@@ -115,7 +116,7 @@ void CoPmLevel::GetLevelBounds(vec2& bmin, vec2& bmax) const
     bmax = vec2((float)m_tile_dim.x, (float)m_tile_dim.y);
 }
 
-PmTile& CoPmLevel::GetTile(vec2 pos, vec2& frac_xy)
+ivec2 CoPmLevel::GetTileCoord(vec2 pos, vec2& frac_xy)
 {
     int ix = (int)pos.x;
     int iy = (int)pos.y;
@@ -124,7 +125,7 @@ PmTile& CoPmLevel::GetTile(vec2 pos, vec2& frac_xy)
 	int i = bigball::clamp(ix, 0, m_tile_dim.x - 1);
 	int j = bigball::clamp(iy, 0, m_tile_dim.y - 1);
     
-	return GetTile(i, j);
+	return ivec2(i, j);
 }
 
 void CoPmLevel::BeginPlay()
@@ -221,6 +222,13 @@ void CoPmLevel::_Render( RenderContext& render_ctxt )
 
     
     // Render balls
+    if (m_need_ball_redraw)
+    {
+        m_need_ball_redraw = false;
+        glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall]);
+        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_draw_balls.Data(), GL_STATIC_DRAW );
+    }
+    
     shader = m_ball_shader;
     shader->Bind();
     {
@@ -316,7 +324,7 @@ void CoPmLevel::CreateBuffers()
 
         glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall] );
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer( 1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(PmDrawTileBall), (void*)offset_params );
+        glVertexAttribPointer( 1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(PmTileBall), (void*)offset_params );
         glVertexAttribDivisor( 1, 1 );
         offset_params += sizeof(u8vec4);
         

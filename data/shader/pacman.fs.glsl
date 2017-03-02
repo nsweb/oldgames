@@ -11,10 +11,10 @@ void main(void)
 {
 	// pacman
     const float dsphere = 0.3;
-    vec2 p = vs_fs_coord - vec2(0.5, 0.5);
+    vec2 p = vs_fs_coord;// - vec2(0.5, 0.5);
     float d = length(p) - dsphere;
     
-    float angle = 30.0 * PI / 180.0 * (0.5 + 0.5 * sin(4.0*time));
+    float angle = 40.0 * PI / 180.0 * (0.5 + 0.5 * sin(8.0*time));
     float cf = cos(angle), sf = sin(angle);
     vec2 nup = vec2(sf, -cf);
     vec2 ndn = vec2(sf, cf);
