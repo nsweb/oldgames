@@ -27,9 +27,11 @@ public:
     void                BeginPlay(CoPmLevel* level);
 
 public:
+    ivec2       m_start_pos;
+    ivec2       m_last_tile_coord;
     vec2        m_input_vector;
 	vec2        m_move_vector;
-    bool        m_hero;
+    int         m_hero;
     
     CoPmLevel*  m_current_level;
 };

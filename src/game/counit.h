@@ -47,6 +47,7 @@ public:
 	Shader*     m_shader;
 
     eUnitState  m_state;
+    float       m_shader_param;
 
     /** Prototype parameters */
     float       m_speed;

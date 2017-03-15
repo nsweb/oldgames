@@ -21,6 +21,7 @@ CoUnit::CoUnit() :
 	m_current_level(nullptr),
 	m_shader(nullptr),
     m_state(eUnitState::Run),
+    m_shader_param(0.f),
     m_speed(1.f)
 {
 
@@ -108,9 +109,6 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 {
     if(!m_shader)
         return;
-	
-    static float global_time = 0.f;
-	global_time += render_ctxt.m_delta_seconds;
 
 	transform cam2world_transform( render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale() );
 	mat4 view_inv_mat( cam2world_transform.GetRotation(), cam2world_transform.GetTranslation(), cam2world_transform.GetScale() );
@@ -128,8 +126,8 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 		m_shader->SetUniform( uni_view, view_mat );
 		ShaderUniform uni_proj = m_shader->GetUniformLocation("proj_mat");
 		m_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
-        ShaderUniform uni_time = m_shader->GetUniformLocation("time");
-        m_shader->SetUniform( uni_time, global_time );
+        ShaderUniform uni_time = m_shader->GetUniformLocation("custom_0");
+        m_shader->SetUniform( uni_time, m_shader_param );
 		
         glBindVertexArray( m_varrays[eVAUnit] );
         

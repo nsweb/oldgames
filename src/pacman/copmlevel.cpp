@@ -41,28 +41,25 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
 
     const char layout1[] =
         " - - - - - - "
-        "|. . .|. . .|"
+        "|O    |    .|"
         "   -     -   "
-        "|.|. . . .|.|"
+        "| |       | |"
+        "     -       "
+        "|   |X X|   |"
         "     - -     "
-        "|. .|. .|. .|"
-        "     - -     "
-        "|.|. . . .|.|"
+        "|.|       |.|"
         "   - - - -   "
-        "|. . .|. . .|"
+        "|    .|.    |"
         "   - - - -   "
-        "|. . . . . .|"
+        "|.         .|"
         " - - - - - - ";
     ivec2 layout_dim = ivec2((m_tile_dim.x * 2 + 1), (m_tile_dim.y * 2 + 1));
     BB_ASSERT(sizeof(layout1) == (layout_dim.x * layout_dim.y + 1));
     
     m_tiles.resize(m_tile_dim.x * m_tile_dim.y);
-    m_tile_draw_walls.reserve(m_tile_dim.x * m_tile_dim.y);
-    m_tile_draw_walls.clear();
-    m_tile_draw_balls.reserve(m_tile_dim.x * m_tile_dim.y);
-    m_tile_draw_balls.clear();
-    PmDrawTileWall dtw;
-    PmTileBall dtb;
+    m_tile_balls.resize(m_tile_dim.x * m_tile_dim.y);
+    m_ghost_starts.clear();
+
     for(int j = 0; j < m_tile_dim.y; j++)
     {
         int jL = 1 + 2*j;
@@ -70,44 +67,41 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         {
             int iL = 1 + 2*i;
             PmTile& tile = GetTile(i, j);
-            
-            tile.m_val      = layout1[jL * layout_dim.x + iL] == '.' ? 1 : 0;
-            
+            PmTileBall& tile_ball = GetTileBall(i, j);
+            char val = layout1[jL * layout_dim.x + iL];
+            if (val == 'O')
+                m_hero_start = ivec2(i, j);
+            else if (val == 'X')
+                m_ghost_starts.push_back( ivec2(i, j) );
+
             tile.m_left     = layout1[jL * layout_dim.x + (iL - 1)] == '|' ? 0 : 1;
             tile.m_right    = layout1[jL * layout_dim.x + (iL + 1)] == '|' ? 0 : 1;
             tile.m_up       = layout1[(jL - 1) * layout_dim.x + iL] == '-' ? 0 : 1;
             tile.m_down     = layout1[(jL + 1) * layout_dim.x + iL] == '-' ? 0 : 1;
             
-            dtw.m_left      = tile.m_left;
-            dtw.m_right     = tile.m_right;
-            dtw.m_up        = tile.m_up;
-            dtw.m_down      = tile.m_down;
-            
-            dtb.m_big       = 1;
-            dtb.m_center    = 1;
-            dtb.m_right     = tile.m_right;
-            dtb.m_down      = tile.m_down;
-            
-            m_tile_draw_walls.push_back(dtw);
-            m_tile_draw_balls.push_back(dtb);
+            tile_ball.m_big       = val == '.' ? 1 : 0;
+            tile_ball.m_center    = 1;
+            tile_ball.m_right     = tile.m_right;
+            tile_ball.m_down      = tile.m_down;
         }
     }
     
-
-	/*json::TokenIdx EntTok = proto->GetToken( "entity", json::OBJECT );
-	json::TokenIdx ShipTok = proto->GetToken( "Ship", json::OBJECT, EntTok );
-	if( ShipTok != INDEX_NONE )
-	{
-		json::TokenIdx ParamTok = proto->GetToken( "speed", json::PRIMITIVE, ShipTok );
-		if( ParamTok != INDEX_NONE )
-			m_speed = proto->GetFloatValue( ParamTok, m_speed );
-	}*/
+    String ghost_name;
+    m_ghosts.resize(m_ghost_starts.size());
+    for(int i = 0; i < m_ghost_starts.size(); i++)
+    {
+        ghost_name = String::Printf("ghost_%d", i);
+        Entity* ent_ghost = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/ghost.json", ghost_name.c_str());
+        m_ghosts[i] = static_cast<CoPmUnit*>( ent_ghost->GetComponent("CoPmUnit") );
+        m_ghosts[i]->m_start_pos = m_ghost_starts[i];
+        m_ghosts[i]->m_shader_param = (float)i;
+    }
     
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileWall]);
-    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_walls.size() * sizeof(PmDrawTileWall), (GLvoid*)m_tile_draw_walls.Data(), GL_STATIC_DRAW );
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tiles.size() * sizeof(PmTile), (GLvoid*)m_tiles.Data(), GL_STATIC_DRAW );
 
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall]);
-    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_draw_balls.Data(), GL_STATIC_DRAW );
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_balls.Data(), GL_STATIC_DRAW );
 }
 
 void CoPmLevel::GetLevelBounds(vec2& bmin, vec2& bmax) const
@@ -133,9 +127,15 @@ void CoPmLevel::BeginPlay()
     if (m_hero)
     {
         CoPmUnit* unit = static_cast<CoPmUnit*>( m_hero->GetComponent("CoPmUnit") );
+        unit->m_start_pos = m_hero_start;
         unit->BeginPlay(this);
     }
 
+    for(int i = 0; i < m_ghosts.size(); i++)
+    {
+        m_ghosts[i]->m_start_pos = m_ghost_starts[i];
+        m_ghosts[i]->BeginPlay(this);
+    }
 }
 
 void CoPmLevel::OnControllerInput( Camera* camera, ControllerInput const& input )
@@ -155,12 +155,17 @@ void CoPmLevel::Destroy()
 
 void CoPmLevel::AddToWorld()
 {
-    
+    for (int i = 0; i < m_ghosts.size(); i++)
+        EntityManager::GetStaticInstance()->AddEntityToWorld( m_ghosts[i]->GetEntity() );
+        
 	Super::AddToWorld();
 }
 
 void CoPmLevel::RemoveFromWorld()
 {
+    for (int i = 0; i < m_ghosts.size(); i++)
+        EntityManager::GetStaticInstance()->RemoveEntityFromWorld( m_ghosts[i]->GetEntity() );
+    
 	Super::RemoveFromWorld();
 }
 
@@ -214,7 +219,7 @@ void CoPmLevel::_Render( RenderContext& render_ctxt )
         //glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_instances.size() * sizeof(PmDrawTileInstance), (GLvoid*)m_tile_draw_instances.Data(), GL_STATIC_DRAW );
         
         //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glDrawElementsInstanced( GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0, m_tile_draw_walls.size() );
+        glDrawElementsInstanced( GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0, m_tiles.size() );
         
         glBindVertexArray(0);
     }
@@ -226,7 +231,7 @@ void CoPmLevel::_Render( RenderContext& render_ctxt )
     {
         m_need_ball_redraw = false;
         glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall]);
-        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_draw_balls.Data(), GL_STATIC_DRAW );
+        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_balls.Data(), GL_STATIC_DRAW );
     }
     
     shader = m_ball_shader;
@@ -243,7 +248,7 @@ void CoPmLevel::_Render( RenderContext& render_ctxt )
         
         glBindVertexArray( m_varrays[eVABalls] );
 
-        glDrawElementsInstanced( GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0, m_tile_draw_balls.size() );
+        glDrawElementsInstanced( GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0, m_tile_balls.size() );
         
         glBindVertexArray(0);
     }
@@ -292,7 +297,7 @@ void CoPmLevel::CreateBuffers()
         uintptr_t offset_params = 0;
         glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTileWall] );
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer( 1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(PmDrawTileWall), (void*)offset_params );
+        glVertexAttribPointer( 1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(PmTile), (void*)offset_params );
         glVertexAttribDivisor( 1, 1 );
         offset_params += sizeof(u8vec4);
         

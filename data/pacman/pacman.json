@@ -5,6 +5,7 @@
 	"unit": 
 	{
 		"shader": "pacman",
-		"speed" : 2.0
+		"speed" : 2.0,
+		"hero" : 1
 	}
 }
