@@ -44,7 +44,7 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         "|O    |    .|"
         "   -     -   "
         "| |       | |"
-        "     -       "
+        "       -     "
         "|   |X X|   |"
         "     - -     "
         "|.|       |.|"
@@ -124,16 +124,18 @@ ivec2 CoPmLevel::GetTileCoord(vec2 pos, vec2& frac_xy)
 
 void CoPmLevel::BeginPlay()
 {
+    CoPmUnit* hero_unit = nullptr;
     if (m_hero)
     {
-        CoPmUnit* unit = static_cast<CoPmUnit*>( m_hero->GetComponent("CoPmUnit") );
-        unit->m_start_pos = m_hero_start;
-        unit->BeginPlay(this);
+        hero_unit = static_cast<CoPmUnit*>( m_hero->GetComponent("CoPmUnit") );
+        hero_unit->m_start_pos = m_hero_start;
+        hero_unit->BeginPlay(this);
     }
 
     for(int i = 0; i < m_ghosts.size(); i++)
     {
         m_ghosts[i]->m_start_pos = m_ghost_starts[i];
+        m_ghosts[i]->m_target = hero_unit;
         m_ghosts[i]->BeginPlay(this);
     }
 }
@@ -346,4 +348,35 @@ void CoPmLevel::DestroyBuffers()
     glDeleteVertexArrays( eVACount, m_varrays );
 }
 
+int32 CoPmLevel::CanViewPosition(ivec2 from, ivec2 to) const
+{
+    if (to.y == from.y)
+    {
+        if (to.x == from.x)
+            return 1;
+            
+        int32 a = bigball::min(to.x, from.x);
+        int32 b = bigball::max(to.x, from.x);
+        for(int32 t = a; t < b; t++)
+        {
+            if (GetTile(t, from.y).m_right == 0)
+                return INDEX_NONE;
+        }
+        return to.x > from.x ? 1 /*right*/ : 0 /*left*/;
+    
+    }
+    else if (to.x == from.x)
+    {
+        int32 a = bigball::min(to.y, from.y);
+        int32 b = bigball::max(to.y, from.y);
+        for(int32 t = a; t < b; t++)
+        {
+            if (GetTile(from.x, t).m_down == 0)
+                return INDEX_NONE;
+        }
+        return to.y > from.y ? 3 /*down*/ : 2 /*up*/;
+    }
+    
+    return INDEX_NONE;
+}
 

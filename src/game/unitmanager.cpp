@@ -63,6 +63,11 @@ void UnitManager::Tick( TickContext& tick_ctxt )
 void UnitManager::_Render( RenderContext& render_ctxt )
 {
 	PROFILE_SCOPE( __FUNCTION__ );
+    
+    //glEnable(GL_BLEND);
+    //glBlendEquation(GL_FUNC_ADD);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
 
 	for( int32 i = 0; i < m_units.size(); ++i )
 	{

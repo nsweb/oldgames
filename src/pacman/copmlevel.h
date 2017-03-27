@@ -63,10 +63,12 @@ public:
     virtual void        OnControllerInput( Camera* camera, ControllerInput const& input ) override;
 
     PmTile&             GetTile(int i, int j)       { return m_tiles[m_tile_dim.x * j + i]; }
+    PmTile const&       GetTile(int i, int j) const { return m_tiles[m_tile_dim.x * j + i]; }
     PmTileBall&         GetTileBall(int i, int j)   { return m_tile_balls[m_tile_dim.x * j + i]; }
 	ivec2               GetTileCoord(vec2 pos, vec2& frac_xy);
     
     void                NeedBallRedraw()            { m_need_ball_redraw = true; }
+    int32               CanViewPosition(ivec2 from, ivec2 to) const;
 
 public:
     ivec2               m_tile_dim;

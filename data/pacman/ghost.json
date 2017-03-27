@@ -1,0 +1,11 @@
+
+"entity": 
+{
+	"pattern" : "PacUnit",
+	"unit": 
+	{
+		"shader": "ghost",
+		"speed" : 2.0,
+		"hero" : 0
+	}
+}

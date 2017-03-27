@@ -19,6 +19,7 @@
 CLASS_EQUIP_CPP(CoPmUnit);
 
 CoPmUnit::CoPmUnit() :
+    m_target(nullptr),
     m_start_pos(0, 0),
     m_last_tile_coord(-1, -1),
     m_input_vector(0.f,0.f),
@@ -127,6 +128,15 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
         else if (tile_coord != m_last_tile_coord)
         {
             int32 d = bigball::rand() % 4;
+            
+            // if target is in view, try to follow it instead
+            if (m_target)
+            {
+                int32 target_d = m_current_level->CanViewPosition(tile_coord, m_target->m_last_tile_coord);
+                if (target_d != INDEX_NONE)
+                    d = target_d;
+            }
+            
             if (tile.m_dir[d] && dir_input[d] != -m_move_vector )
             {
                 m_input_vector = dir_input[d];

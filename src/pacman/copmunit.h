@@ -27,6 +27,7 @@ public:
     void                BeginPlay(CoPmLevel* level);
 
 public:
+    CoPmUnit*   m_target;
     ivec2       m_start_pos;
     ivec2       m_last_tile_coord;
     vec2        m_input_vector;
