@@ -20,7 +20,11 @@ CLASS_EQUIP_CPP(CoPmLevel);
 CoPmLevel::CoPmLevel() :
     m_tile_shader(nullptr),
     m_ball_shader(nullptr),
-    m_need_ball_redraw(false)
+    m_need_ball_redraw(false),
+    m_state_change_request(false),
+    m_current_game_state(ePmGameState::Run),
+    m_pending_game_state(ePmGameState::Run),
+    m_state_timer(0.f)
 {
 
 }
@@ -94,7 +98,8 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         Entity* ent_ghost = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/ghost.json", ghost_name.c_str());
         m_ghosts[i] = static_cast<CoPmUnit*>( ent_ghost->GetComponent("CoPmUnit") );
         m_ghosts[i]->m_start_pos = m_ghost_starts[i];
-        m_ghosts[i]->m_shader_param = (float)i;
+        m_ghosts[i]->m_shader_param[0] = (float)i;
+        m_ghosts[i]->m_shader_param[1] = (float)0;
     }
     
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileWall]);
@@ -124,6 +129,9 @@ ivec2 CoPmLevel::GetTileCoord(vec2 pos, vec2& frac_xy)
 
 void CoPmLevel::BeginPlay()
 {
+    m_current_game_state = ePmGameState::Run;
+    m_pending_game_state = ePmGameState::Run;
+    
     CoPmUnit* hero_unit = nullptr;
     if (m_hero)
     {
@@ -173,7 +181,31 @@ void CoPmLevel::RemoveFromWorld()
 
 void CoPmLevel::Tick( TickContext& tick_ctxt )
 {
-
+    m_current_game_state = m_pending_game_state;
+    
+    if (m_state_change_request)
+    {
+        m_state_timer = 6.f;
+    }
+    
+    m_state_timer -= tick_ctxt.m_delta_seconds;
+    if (m_state_timer <= 0.f)
+    {
+        switch (m_current_game_state) {
+            case ePmGameState::GhostFlee:
+                m_current_game_state = ePmGameState::Run;
+                break;
+            case ePmGameState::HeroDie:
+                m_current_game_state = ePmGameState::Run;
+                break;
+                
+            default:
+                break;
+        }
+        m_state_timer = 0.f;
+    }
+    
+    m_state_change_request = false;
 }
 
 void CoPmLevel::_Render( RenderContext& render_ctxt )
@@ -378,5 +410,18 @@ int32 CoPmLevel::CanViewPosition(ivec2 from, ivec2 to) const
     }
     
     return INDEX_NONE;
+}
+
+int32 CoPmLevel::ReverseDir(int32 dir) const
+{
+    switch (dir) {
+        case 0: return 1; break;
+        case 1: return 0; break;
+        case 2: return 3; break;
+        case 3: return 2; break;
+        default:
+            break;
+    }
+    return -1;
 }
 

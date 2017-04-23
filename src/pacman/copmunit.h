@@ -33,6 +33,7 @@ public:
     vec2        m_input_vector;
 	vec2        m_move_vector;
     int         m_hero;
+    bool        m_is_weak;
     
     CoPmLevel*  m_current_level;
 };

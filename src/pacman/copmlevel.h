@@ -40,6 +40,13 @@ struct PmTileBall
     uint8   m_down;
 };
 
+enum class ePmGameState : uint32
+{
+    Run = 0,
+    HeroDie,
+    GhostFlee
+};
+
 //////////////////////////////////////////////////
 class CoPmLevel : public CoLevel
 {
@@ -69,6 +76,11 @@ public:
     
     void                NeedBallRedraw()            { m_need_ball_redraw = true; }
     int32               CanViewPosition(ivec2 from, ivec2 to) const;
+    int32               ReverseDir(int32 dir) const;
+    
+    void                RequestGameStateChange(ePmGameState new_state) { m_pending_game_state = new_state; m_state_change_request = true; }
+    ePmGameState        GetGameState() const        { return m_current_game_state;  }
+    float               GetGameStateTimer() const   { return m_state_timer;         }
 
 public:
     ivec2               m_tile_dim;
@@ -77,6 +89,11 @@ public:
     Array<PmTile>       m_tiles;
     Array<PmTileBall>   m_tile_balls;
     Array<CoPmUnit*>    m_ghosts;
+    
+    // game state
+    ePmGameState        m_current_game_state;
+    ePmGameState        m_pending_game_state;
+    float               m_state_timer;
     
     enum eVAType
     {
@@ -99,6 +116,7 @@ public:
     Shader*                 m_tile_shader;
     Shader*                 m_ball_shader;
     bool                    m_need_ball_redraw;
+    bool                    m_state_change_request;
     
     
     void                LoadShaders();

@@ -25,7 +25,8 @@ CoPmUnit::CoPmUnit() :
     m_input_vector(0.f,0.f),
 	m_move_vector(0.f,0.f),
     m_current_level(nullptr),
-    m_hero(0)
+    m_hero(0),
+    m_is_weak(false)
 {
 
 }
@@ -75,6 +76,9 @@ void CoPmUnit::BeginPlay( CoPmLevel* level )
         // top left corner
         copos->SetPosition(vec3(m_start_pos.x + 0.5f, m_start_pos.y + 0.5f, 0));
     }
+    
+    m_shader_param[1] = 1.f;
+    m_is_weak = false;
 }
 
 void CoPmUnit::Tick( TickContext& tick_ctxt )
@@ -88,12 +92,27 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
     if (m_hero)
     {
         float angle = 40.0 * F_PI / 180.0 * (0.5 + 0.5 * bigball::sin(8.0*global_time));
-        m_shader_param = angle;
+        m_shader_param[0] = angle;
     }
     else
     {
-        
+        if (m_current_level->GetGameState() == ePmGameState::GhostFlee)
+        {
+            float timer = m_current_level->GetGameStateTimer();
+            m_shader_param[1] = 0.6 + 0.4f * bigball::cos(12.f * F_2_PI * timer);
+        }
+        else if (m_current_level->GetGameState() == ePmGameState::HeroDie)
+        {
+            m_shader_param[1] = 0.f;
+        }
+        else
+        {
+            m_shader_param[1] = 1.f;
+        }
     }
+    
+    if (m_current_level->GetGameState() == ePmGameState::HeroDie)
+        return; // everybody freezes while hero is dying
     
     CoPosition* copos = static_cast<CoPosition*>(GetEntityComponent("CoPosition"));
     if (!copos)
@@ -107,7 +126,7 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
     PmTileBall& tile_ball = m_current_level->GetTileBall(tile_coord.x, tile_coord.y);
     
     // ai logic
-    if (!m_hero)
+    if (!m_hero )
     {
         const vec2 dir_input[4] = { vec2(-1, 0), vec2(1, 0), vec2(0,1), vec2(0, -1) };
         // check whether we are not moving anymore
@@ -134,7 +153,12 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
             {
                 int32 target_d = m_current_level->CanViewPosition(tile_coord, m_target->m_last_tile_coord);
                 if (target_d != INDEX_NONE)
-                    d = target_d;
+                {
+                    if(m_current_level->GetGameState() == ePmGameState::GhostFlee)
+                        d = m_current_level->ReverseDir(target_d);
+                    else
+                        d = target_d;
+                }
             }
             
             if (tile.m_dir[d] && dir_input[d] != -m_move_vector )
@@ -182,11 +206,28 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
                                     fxy.y > 0.5f - eat_margin && fxy.y < 0.5f + eat_margin)
         {
             tile_ball.m_center = 0;
+            if (tile_ball.m_big)
+                m_current_level->RequestGameStateChange(ePmGameState::GhostFlee);
             ball_eaten++;
         }
         
         if (ball_eaten > 0)
             m_current_level->NeedBallRedraw();
+    }
+    else
+    {
+        // ai logic : check collision
+        if (tile_coord == m_target->m_last_tile_coord)
+        {
+            if (m_current_level->GetGameState() == ePmGameState::Run)
+            {
+                m_current_level->RequestGameStateChange(ePmGameState::HeroDie);
+            }
+            else if (m_current_level->GetGameState() == ePmGameState::GhostFlee)
+            {
+                m_is_weak = true;
+            }
+        }
         
     }
     

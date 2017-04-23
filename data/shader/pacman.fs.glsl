@@ -2,6 +2,7 @@
 in vec2 vs_fs_coord;
 
 uniform float custom_0;
+uniform float custom_1;
 
 layout (location = 0) out vec4 color;
 

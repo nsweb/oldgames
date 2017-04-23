@@ -21,7 +21,7 @@ CoUnit::CoUnit() :
 	m_current_level(nullptr),
 	m_shader(nullptr),
     m_state(eUnitState::Run),
-    m_shader_param(0.f),
+    m_shader_param{0.f},
     m_speed(1.f)
 {
 
@@ -85,7 +85,6 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
 void CoUnit::Destroy()
 {
 
-
 	Super::Destroy();
 }
 
@@ -127,7 +126,9 @@ void CoUnit::_Render( RenderContext& render_ctxt )
 		ShaderUniform uni_proj = m_shader->GetUniformLocation("proj_mat");
 		m_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
         ShaderUniform uni_time = m_shader->GetUniformLocation("custom_0");
-        m_shader->SetUniform( uni_time, m_shader_param );
+        m_shader->SetUniform( uni_time, m_shader_param[0] );
+        ShaderUniform uni_alpha = m_shader->GetUniformLocation("custom_1");
+        m_shader->SetUniform( uni_alpha, m_shader_param[1] );
 		
         glBindVertexArray( m_varrays[eVAUnit] );
         
