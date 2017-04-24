@@ -77,7 +77,7 @@ void CoPmUnit::BeginPlay( CoPmLevel* level )
         copos->SetPosition(vec3(m_start_pos.x + 0.5f, m_start_pos.y + 0.5f, 0));
     }
     
-    m_shader_param[1] = 1.f;
+    m_shader_param[0].y = 1.f; // alpha
     m_is_weak = false;
 }
 
@@ -92,23 +92,27 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
     if (m_hero)
     {
         float angle = 40.0 * F_PI / 180.0 * (0.5 + 0.5 * bigball::sin(8.0*global_time));
-        m_shader_param[0] = angle;
+        m_shader_param[0].x = angle;
     }
     else
     {
         if (m_current_level->GetGameState() == ePmGameState::GhostFlee)
         {
             float timer = m_current_level->GetGameStateTimer();
-            m_shader_param[1] = 0.6 + 0.4f * bigball::cos(12.f * F_2_PI * timer);
+            m_shader_param[0].y = 0.6 + 0.4f * bigball::cos(12.f * F_2_PI * timer);
         }
         else if (m_current_level->GetGameState() == ePmGameState::HeroDie)
         {
-            m_shader_param[1] = 0.f;
+            m_shader_param[0].y = 0.f;
         }
         else
         {
-            m_shader_param[1] = 1.f;
+            m_shader_param[0].y = 1.f;
         }
+        
+        static float ghost_time = 0.f;
+        ghost_time = bigball::fmod(ghost_time + tick_ctxt.m_delta_seconds, 32.f);
+        m_shader_param[0].w = ghost_time;
     }
     
     if (m_current_level->GetGameState() == ePmGameState::HeroDie)

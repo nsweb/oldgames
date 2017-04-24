@@ -98,8 +98,8 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         Entity* ent_ghost = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/ghost.json", ghost_name.c_str());
         m_ghosts[i] = static_cast<CoPmUnit*>( ent_ghost->GetComponent("CoPmUnit") );
         m_ghosts[i]->m_start_pos = m_ghost_starts[i];
-        m_ghosts[i]->m_shader_param[0] = (float)i;
-        m_ghosts[i]->m_shader_param[1] = (float)0;
+        m_ghosts[i]->m_shader_param[0].x = (float)i;
+        m_ghosts[i]->m_shader_param[0].y = (float)0;
     }
     
     glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileWall]);

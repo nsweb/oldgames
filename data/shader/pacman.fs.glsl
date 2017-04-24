@@ -1,8 +1,8 @@
 
 in vec2 vs_fs_coord;
 
-uniform float custom_0;
-uniform float custom_1;
+uniform vec4 custom_0; // angle
+uniform vec4 custom_1;
 
 layout (location = 0) out vec4 color;
 
@@ -15,7 +15,7 @@ void main(void)
     vec2 p = vs_fs_coord;// - vec2(0.5, 0.5);
     float d = length(p) - dsphere;
     
-    float angle = custom_0;//40.0 * PI / 180.0 * (0.5 + 0.5 * sin(8.0*time));
+    float angle = custom_0.x;//40.0 * PI / 180.0 * (0.5 + 0.5 * sin(8.0*time));
     float cf = cos(angle), sf = sin(angle);
     vec2 nup = vec2(sf, -cf);
     vec2 ndn = vec2(sf, cf);

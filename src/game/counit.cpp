@@ -21,7 +21,7 @@ CoUnit::CoUnit() :
 	m_current_level(nullptr),
 	m_shader(nullptr),
     m_state(eUnitState::Run),
-    m_shader_param{0.f},
+    m_shader_param{vec4(0.f)},
     m_speed(1.f)
 {
 
