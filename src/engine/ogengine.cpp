@@ -56,7 +56,7 @@ bool OGEngine::Init(EngineInitParams const& init_params)
 
 	// Link scene objects
 	CoLevel* level = OGWorld::GetStaticInstance()->GetCurrentLevel();
-    level->BeginPlay();
+    level->BeginPlay(true /*new_game*/);
     
     CameraCtrl_Base* cam_ctrl = Controller::GetStaticInstance()->GetCameraCtrl( OGCameraCtrl_2D::StaticClass() );
 	if( cam_ctrl && cam_ctrl->IsA( OGCameraCtrl_2D::StaticClass() ) )

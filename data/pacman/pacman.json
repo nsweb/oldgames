@@ -6,6 +6,7 @@
 	{
 		"shader": "pacman",
 		"speed" : 2.0,
-		"hero" : 1
+		"hero" : 1,
+		"life" : 3
 	}
 }

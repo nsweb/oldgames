@@ -2,6 +2,7 @@
 
 #include "../oldgames.h"
 #include "copmlevel.h"
+#include "copmunit.h"
 #include "core/json.h"
 #include "system/file.h"
 #include "engine/coposition.h"
@@ -13,7 +14,7 @@
 #include "gfx/shader.h"
 #include "gfx/rendercontext.h"
 #include "gfx/drawutils.h"
-#include "copmunit.h"
+#include "../game/ogworld.h"
 
 CLASS_EQUIP_CPP(CoPmLevel);
 
@@ -41,9 +42,9 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
     LoadShaders();
     CreateBuffers();
     
-    m_tile_dim = ivec2(6, 6);
+    m_tile_dim = ivec2(12, 6);
 
-    const char layout1[] =
+    /*const char layout1[] =
         " - - - - - - "
         "|O    |    .|"
         "   -     -   "
@@ -56,7 +57,38 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         "|    .|.    |"
         "   - - - -   "
         "|.         .|"
-        " - - - - - - ";
+        " - - - - - - ";*/
+    
+    /*const char layout1[] =
+    " - - - - - - - - - - - - "
+    "|O    |                .|"
+    "   -     - - - - -       "
+    "| |       |    . .  |   |"
+    "       -           -     "
+    "|   |X X X X      |     |"
+    "     - -  -      - - -   "
+    "|.|       |.|    .      |"
+    "   - - - -               "
+    "|    .|.    |  .|    .  |"
+    "   - - - -     - - -     "
+    "|.         .           .|"
+    " - - - - - - - - - - - - ";*/
+    
+    const char layout1[] =
+    " - - - - - - - - - - - - "
+    "|        O             .|"
+    "   -     - - - - -       "
+    "| |       |    . .  |   |"
+    "       -           -     "
+    "|      X      |   |X    |"
+    "     - -  -      - - -   "
+    "|.|        .| |  .      |"
+    "   - - - -               "
+    "|    .|.    |  .|    .  |"
+    "   - - - -     - - -     "
+    "|.         .           .|"
+    " - - - - - - - - - - - - ";
+    
     ivec2 layout_dim = ivec2((m_tile_dim.x * 2 + 1), (m_tile_dim.y * 2 + 1));
     BB_ASSERT(sizeof(layout1) == (layout_dim.x * layout_dim.y + 1));
     
@@ -127,7 +159,7 @@ ivec2 CoPmLevel::GetTileCoord(vec2 pos, vec2& frac_xy)
 	return ivec2(i, j);
 }
 
-void CoPmLevel::BeginPlay()
+void CoPmLevel::BeginPlay(bool new_game)
 {
     m_current_game_state = ePmGameState::Run;
     m_pending_game_state = ePmGameState::Run;
@@ -137,14 +169,14 @@ void CoPmLevel::BeginPlay()
     {
         hero_unit = static_cast<CoPmUnit*>( m_hero->GetComponent("CoPmUnit") );
         hero_unit->m_start_pos = m_hero_start;
-        hero_unit->BeginPlay(this);
+        hero_unit->BeginPlay(this, new_game);
     }
 
     for(int i = 0; i < m_ghosts.size(); i++)
     {
         m_ghosts[i]->m_start_pos = m_ghost_starts[i];
         m_ghosts[i]->m_target = hero_unit;
-        m_ghosts[i]->BeginPlay(this);
+        m_ghosts[i]->BeginPlay(this, new_game);
     }
 }
 
@@ -186,6 +218,11 @@ void CoPmLevel::Tick( TickContext& tick_ctxt )
     if (m_state_change_request)
     {
         m_state_timer = 6.f;
+        switch (m_current_game_state) {
+            case ePmGameState::HeroDie:
+                OGWorld::GetStaticInstance()->RequestTransition(eTransitionType::PlayerDies);
+                break;
+        }
     }
     
     m_state_timer -= tick_ctxt.m_delta_seconds;

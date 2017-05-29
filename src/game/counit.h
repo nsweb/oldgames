@@ -41,6 +41,7 @@ public:
 
 	void				ChangeState(eUnitState new_state);
 	void				SetCurrentLevel(Entity* current_level);
+    vec2                GetScreenPos(mat4 const& view_proj);
 
 public:
 	Entity*		m_current_level;

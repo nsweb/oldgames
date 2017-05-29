@@ -36,7 +36,7 @@ public:
 	virtual void		_Render( RenderContext& render_ctxt);
     virtual void        GetLevelBounds(vec2& bmin, vec2& bmax) const    { bmin = vec2(0.f,0.f); bmax = vec2(1.f,1.f); }
     
-    virtual void        BeginPlay() {}
+    virtual void        BeginPlay(bool new_game) {}
     virtual void        OnControllerInput( Camera* camera, ControllerInput const& input )   {}
     void                SetHero( Entity* hero )                         { m_hero = hero;                              }
     

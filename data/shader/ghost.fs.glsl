@@ -12,7 +12,9 @@ void main(void)
 {
 	// ghost
     vec2 p = vs_fs_coord;
-    vec3 base_col = mix(vec3(1.0, 0.1, 0.1), vec3(1.0, 0.1, 1.0), custom_0.x);
+    vec3 base_col = custom_0.x < 0.5 ? vec3(1.0, 0.1, 0.1) :
+                    custom_0.x < 1.5 ? vec3(1.0, 0.1, 1.0) :
+                    custom_0.x < 2.5 ? vec3(0.1, 0.8, 0.1) : vec3(0.1, 0.1, 0.8);
     vec4 rgba = vec4(0.0, 0.0, 0.0, 0.0);
     
     // left eye

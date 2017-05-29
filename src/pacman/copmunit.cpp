@@ -26,6 +26,7 @@ CoPmUnit::CoPmUnit() :
 	m_move_vector(0.f,0.f),
     m_current_level(nullptr),
     m_hero(0),
+    m_initial_life(0),
     m_is_weak(false)
 {
 
@@ -47,6 +48,9 @@ void CoPmUnit::Create( Entity* owner, class json::Object* proto )
         json::TokenIdx param_tok = proto->GetToken( "hero", json::PRIMITIVE, unit_tok);
         if( param_tok != INDEX_NONE )
             m_hero = proto->GetIntValue( param_tok, m_hero);
+        param_tok = proto->GetToken( "life", json::PRIMITIVE, unit_tok);
+        if( param_tok != INDEX_NONE )
+            m_initial_life = proto->GetIntValue( param_tok, m_initial_life);
     }
 }
 
@@ -65,7 +69,7 @@ void CoPmUnit::RemoveFromWorld()
 	Super::RemoveFromWorld();
 }
 
-void CoPmUnit::BeginPlay( CoPmLevel* level )
+void CoPmUnit::BeginPlay(CoPmLevel* level, bool new_game)
 {
     m_current_level = level;
     
@@ -74,10 +78,13 @@ void CoPmUnit::BeginPlay( CoPmLevel* level )
     if (copos)
     {
         // top left corner
-        copos->SetPosition(vec3(m_start_pos.x + 0.5f, m_start_pos.y + 0.5f, 0));
+        if (!m_hero || new_game)
+            copos->SetPosition(vec3(m_start_pos.x + 0.5f, m_start_pos.y + 0.5f, 0));
     }
     
     m_shader_param[0].y = 1.f; // alpha
+    m_input_vector = vec2::zero;
+    m_move_vector = vec2::zero;
     m_is_weak = false;
 }
 

@@ -109,20 +109,16 @@ void CoUnit::_Render( RenderContext& render_ctxt )
     if(!m_shader)
         return;
 
-	transform cam2world_transform( render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale() );
-	mat4 view_inv_mat( cam2world_transform.GetRotation(), cam2world_transform.GetTranslation(), cam2world_transform.GetScale() );
-
 	CoPosition* ppos = static_cast<CoPosition*>( GetEntityComponent( CoPosition::StaticClass() ) );
     transform unit_transform = ppos->GetTransform();
 	mat4 world_mat( unit_transform.GetRotation(), unit_transform.GetTranslation(), (float)unit_transform.GetScale() );
-	mat4 view_mat = bigball::inverse(view_inv_mat);
 
 	m_shader->Bind();
 	{
 		ShaderUniform uni_world = m_shader->GetUniformLocation("world_mat");
 		m_shader->SetUniform( uni_world, world_mat );
 		ShaderUniform uni_view = m_shader->GetUniformLocation("view_mat");
-		m_shader->SetUniform( uni_view, view_mat );
+		m_shader->SetUniform( uni_view, render_ctxt.m_view_mat );
 		ShaderUniform uni_proj = m_shader->GetUniformLocation("proj_mat");
 		m_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
         ShaderUniform uni_time = m_shader->GetUniformLocation("custom_0");
@@ -137,7 +133,15 @@ void CoUnit::_Render( RenderContext& render_ctxt )
         glBindVertexArray(0);
 	}
 	m_shader->Unbind();
+}
 
+vec2 CoUnit::GetScreenPos(mat4 const& view_proj)
+{
+    CoPosition* ppos = static_cast<CoPosition*>( GetEntityComponent( CoPosition::StaticClass() ) );
+    transform unit_transform = ppos->GetTransform();
+    vec4 proj_pos = view_proj * vec4( unit_transform.GetTranslation(), 1.f );
+    vec2 pos = vec2( proj_pos.x / proj_pos.w, proj_pos.y / proj_pos.w );
+    return pos;
 }
 
 void CoUnit::ChangeState( eUnitState new_state )

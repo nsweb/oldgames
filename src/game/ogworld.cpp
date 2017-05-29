@@ -3,11 +3,13 @@
 #include "../oldgames.h"
 #include "ogworld.h"
 #include "colevel.h"
+#include "counit.h"
 #include "core/json.h"
 #include "engine/controller.h"
 #include "engine/camera.h"
 #include "engine/entity.h"
 #include "engine/entitymanager.h"
+#include "engine/tickcontext.h"
 #include "gfx/gfxmanager.h"
 #include "gfx/shader.h"
 #include "gfx/rendercontext.h"
@@ -17,8 +19,11 @@
 STATIC_MANAGER_CPP(OGWorld);
 
 OGWorld::OGWorld() :
-    m_current_level_idx(INDEX_NONE)
-	//m_levelshader(nullptr)
+    m_current_level_idx(INDEX_NONE),
+    m_game_state{0},
+    m_varrays{0},
+    m_vbuffers{0},
+    m_transition_shader(nullptr)
 {
 	m_pStaticInstance = this;
 }
@@ -30,12 +35,13 @@ OGWorld::~OGWorld()
 
 void OGWorld::Create()
 {
-	//m_levelshader = new LevelShader();
+    LoadShaders();
+    CreateBuffers();
 }
 
 void OGWorld::Destroy()
 {
-	//BB_DELETE(m_levelshader);
+    DestroyBuffers();
 }
 
 bool OGWorld::InitLevels( char const* json_path )
@@ -132,6 +138,29 @@ void OGWorld::Tick( TickContext& tick_ctxt )
 	{
 		m_levels[i]->Tick( tick_ctxt );
 	}
+    
+    if (m_game_state.m_transition_time > 0.f)
+    {
+        m_game_state.m_transition_time -= tick_ctxt.m_delta_seconds;
+        if (m_game_state.m_transition_time <= 0.f)
+        {
+            m_game_state.m_transition_time = 0.f;
+            
+            switch (m_game_state.m_transition_type) {
+                case eTransitionType::PlayerDies:
+                {
+                    m_game_state.m_player_life--;
+                    //if (m_game_state.m_player_life > 0)
+                        GetCurrentLevel()->BeginPlay(false);
+                }
+                break;
+                
+                default:
+                break;
+            }
+            m_game_state.m_transition_type = eTransitionType::None;
+        }
+    }
 }
 
 void OGWorld::_Render( RenderContext& render_ctxt )
@@ -142,5 +171,79 @@ void OGWorld::_Render( RenderContext& render_ctxt )
     {
         m_levels[i]->_Render( render_ctxt );
     }
+    
+    // render transition
+    //m_game_state.m_transition_time = 0.5f;
+    if (m_game_state.m_transition_time > 0.f )
+    {
+        CoLevel* level = GetCurrentLevel();
+        CoUnit* unit = static_cast<CoUnit*>( level ? level->m_hero->GetCompatibleComponent("CoUnit") : nullptr );
+        vec2 unit_pos = unit->GetScreenPos(render_ctxt.m_proj_mat * render_ctxt.m_view_mat);
+        
+        Shader* shader = m_transition_shader;
+        shader->Bind();
+        {
+            ShaderUniform uni_type = shader->GetUniformLocation("transition_type");
+            shader->SetUniform( uni_type, unit_pos );
+            ShaderUniform uni_pos = shader->GetUniformLocation("transition_pos");
+            shader->SetUniform( uni_pos, unit_pos );
+            ShaderUniform uni_time = shader->GetUniformLocation("transition_time");
+            shader->SetUniform( uni_time, m_game_state.m_transition_time );
+            
+            glBindVertexArray( m_varrays[eVATransition] );
+
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
+        }
+        shader->Unbind();
+    }
+}
+
+void OGWorld::RequestTransition( eTransitionType type )
+{
+    m_game_state.m_transition_type = type;
+    m_game_state.m_transition_time = 4.f;
+}
+
+void OGWorld::LoadShaders()
+{
+    m_transition_shader = GfxManager::GetStaticInstance()->LoadShader( "transition" );
+}
+
+void OGWorld::CreateBuffers()
+{
+    glGenVertexArrays( eVACount, m_varrays );
+    glGenBuffers( eVBCount, m_vbuffers );
+    
+    
+    //////////////////////////////////////////////////////////
+    // transition quad
+    const vec2 tile_vertices[] = { vec2(-1.f,-1.f), vec2(1.f,-1.f), vec2(1.f,1.f), vec2(-1.f,1.f) };
+    
+    GLuint idx_data[] = {
+        0,1,2, 0,2,3
+    };
+    
+    glBindVertexArray( m_varrays[eVATransition] );
+    {
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBTransitionElt] );
+        glBufferData( GL_ELEMENT_ARRAY_BUFFER, COUNT_OF(idx_data) * sizeof(GLuint), idx_data, GL_STATIC_DRAW );
+        
+        glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTransition] );
+        glBufferData( GL_ARRAY_BUFFER, COUNT_OF(tile_vertices) * sizeof(vec2), tile_vertices, GL_STATIC_DRAW );
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2) /*stride*/, (void*)0 /*offset*/ );
+        
+        glBindVertexArray(0);
+        for( int attrib_idx = 0; attrib_idx < 8; attrib_idx++)
+            glDisableVertexAttribArray( attrib_idx);
+    }
+    
+}
+
+void OGWorld::DestroyBuffers()
+{
+    glDeleteBuffers( eVBCount, m_vbuffers );
+    glDeleteVertexArrays( eVACount, m_varrays );
 }
 

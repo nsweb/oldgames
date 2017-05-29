@@ -14,6 +14,20 @@ namespace bigball
 };
 class CoLevel;
 
+enum class eTransitionType : int32
+{
+    None = -1,
+    PlayerDies = 0,
+};
+
+struct OGGameState
+{
+    int32           m_player_life;
+    int32           m_player_points;
+    eTransitionType m_transition_type;
+    float           m_transition_time;
+};
+
 class OGWorld : public ComponentManager
 {
     STATIC_MANAGER_H(OGWorld);
@@ -36,12 +50,34 @@ public:
 	Array<CoLevel*> const&  GetLevelArray()	{ return m_levels;	}
     CoLevel*                GetCurrentLevel();
     bool                    SetCurrentLevel( int level_idx );
+    void                    RequestTransition( eTransitionType type );
 
 protected:
 	Array<CoLevel*>		m_levels;
     int                 m_current_level_idx;
+    OGGameState         m_game_state;
 
-	//LevelShader*		m_levelshader;
+    
+    enum eVAType
+    {
+        eVATransition = 0,
+        eVACount
+    };
+    enum eVBType
+    {
+        eVBTransition = 0,
+        eVBTransitionElt,
+        eVBCount
+    };
+    
+    // rendering stuff
+    GLuint                  m_varrays[eVACount];
+    GLuint                  m_vbuffers[eVBCount];
+    Shader*                 m_transition_shader;
+    
+    void                LoadShaders();
+    void                CreateBuffers();
+    void                DestroyBuffers();
 };
 
 

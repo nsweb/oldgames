@@ -24,7 +24,7 @@ public:
 	virtual void		RemoveFromWorld() override;
 	virtual void		Tick(TickContext& tick_ctxt) override;
 	void				OnControllerInput( ControllerInput const& input);
-    void                BeginPlay(CoPmLevel* level);
+    void                BeginPlay(CoPmLevel* level, bool new_game);
 
 public:
     CoPmUnit*   m_target;
@@ -32,7 +32,8 @@ public:
     ivec2       m_last_tile_coord;
     vec2        m_input_vector;
 	vec2        m_move_vector;
-    int         m_hero;
+    int32       m_hero;
+    int32       m_initial_life;
     bool        m_is_weak;
     
     CoPmLevel*  m_current_level;
