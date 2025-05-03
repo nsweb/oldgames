@@ -6,11 +6,11 @@
 
 #include "engine/componentmanager.h"
 
-namespace bigball
+namespace bigfx
 {
-	class BIGBALL_API Component;
-	class BIGBALL_API Shader;
-    struct BIGBALL_API RenderContext;
+	class BIGFX_API Component;
+	class BIGFX_API Shader;
+    struct BIGFX_API RenderContext;
 };
 class CoLevel;
 
@@ -44,7 +44,7 @@ public:
 	virtual void            AddComponentToWorld( Component* pComponent );
 	virtual void            RemoveComponentFromWorld( Component* pComponent );
 	virtual void            Tick( struct TickContext& TickCtxt );
-    virtual void            _Render( bigball::RenderContext& RenderCtxt );
+    virtual void            _Render( bigfx::RenderContext& RenderCtxt );
 
     bool                    InitLevels( char const* json_path );
 	Array<CoLevel*> const&  GetLevelArray()	{ return m_levels;	}
@@ -56,24 +56,12 @@ protected:
 	Array<CoLevel*>		m_levels;
     int                 m_current_level_idx;
     OGGameState         m_game_state;
-
-    
-    enum eVAType
-    {
-        eVATransition = 0,
-        eVACount
-    };
-    enum eVBType
-    {
-        eVBTransition = 0,
-        eVBTransitionElt,
-        eVBCount
-    };
     
     // rendering stuff
-    GLuint                  m_varrays[eVACount];
-    GLuint                  m_vbuffers[eVBCount];
-    Shader*                 m_transition_shader;
+    bgfx::ProgramHandle         m_transition_shader;
+    bgfx::UniformHandle         m_u_transition;
+    bgfx::VertexBufferHandle	m_vbh_quad;
+    bgfx::IndexBufferHandle		m_ibh_quad;
     
     void                LoadShaders();
     void                CreateBuffers();

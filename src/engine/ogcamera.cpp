@@ -65,7 +65,7 @@ void OGCameraCtrl_2D::OnLevelReset( CoLevel* level )
     CameraView& view = camera->GetView();
     float fov_h = view.m_parameters[eCP_FOV] * (F_PI / 180.0f);
     float level_width = bmax.x - bmin.x;
-    float cam_height = level_width * 0.5f / bigball::tan(fov_h * 0.5f);
+    float cam_height = level_width * 0.5f / bigfx::tan(fov_h * 0.5f);
     
     vec3 cam_pos;
     cam_pos.xy = (bmin + bmax) * 0.5f;

@@ -1,5 +1,3 @@
-
-
 #include "../oldgames.h"
 #include "copmlevel.h"
 #include "copmunit.h"
@@ -19,8 +17,8 @@
 CLASS_EQUIP_CPP(CoPmLevel);
 
 CoPmLevel::CoPmLevel() :
-    m_tile_shader(nullptr),
-    m_ball_shader(nullptr),
+    m_tile_shader(BGFX_INVALID_HANDLE),
+    m_ball_shader(BGFX_INVALID_HANDLE),
     m_need_ball_redraw(false),
     m_state_change_request(false),
     m_current_game_state(ePmGameState::Run),
@@ -41,57 +39,81 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
     
     LoadShaders();
     CreateBuffers();
-    
-    m_tile_dim = ivec2(12, 6);
 
-    /*const char layout1[] =
-        " - - - - - - "
-        "|O    |    .|"
-        "   -     -   "
-        "| |       | |"
-        "       -     "
-        "|   |X X|   |"
-        "     - -     "
-        "|.|       |.|"
-        "   - - - -   "
-        "|    .|.    |"
-        "   - - - -   "
-        "|.         .|"
-        " - - - - - - ";*/
+    //Array<String> layout {
+    //    " - - - - - - ",
+    //    "|O    |    .|",
+    //    "   -     -   ",
+    //    "| |       |X|",
+    //    " - - - - - - " };
+
+    Array<String> layout {
+        " - - - - - - ",
+        "|O    |    .|",
+        "   -     -   ",
+        "| |       | |",
+        "       -     ",
+        "|   |X X|   |",
+        "     - -     ",
+        "|.|       |.|",
+        "   - - - -   ",
+        "|    .|.    |",
+        "   - - - -   ",
+        "|.         .|",
+        " - - - - - - " };
+
+    //Array<String> layout2 {
+    //" - - - - - - - - - - - - ",
+    //"|     |      O   .     .|",
+    //"   -     - -   - -       ",
+    //"| |       |    . .  |X  |",
+    //"     - -           -     ",
+    //"|   |X X   X      |     |",
+    //"     - -  -      - - -   ",
+    //"|.|       | |    .      |",
+    //"   - - - -               ",
+    //"|    .|.    |  .|    .  |",
+    //"   - - - -     - - -     ",
+    //"|. X X X X . X         .|",
+    //" - - - - - - - - - - - - "};
     
-    /*const char layout1[] =
-    " - - - - - - - - - - - - "
-    "|O    |                .|"
-    "   -     - - - - -       "
-    "| |       |    . .  |   |"
-    "       -           -     "
-    "|   |X X X X      |     |"
-    "     - -  -      - - -   "
-    "|.|       |.|    .      |"
-    "   - - - -               "
-    "|    .|.    |  .|    .  |"
-    "   - - - -     - - -     "
-    "|.         .           .|"
-    " - - - - - - - - - - - - ";*/
+    //const char layout1[] =
+    //" - - - - - - - - - - - - "
+    //"|O    |                .|"
+    //"   -     - - - - -       "
+    //"| |       |    . .  |   |"
+    //"       -           -     "
+    //"|   |X X X X      |     |"
+    //"     - -  -      - - -   "
+    //"|.|       |.|    .      |"
+    //"   - - - -               "
+    //"|    .|.    |  .|    .  |"
+    //"   - - - -     - - -     "
+    //"|.         .           .|"
+    //" - - - - - - - - - - - - ";
     
-    const char layout1[] =
-    " - - - - - - - - - - - - "
-    "|        O             .|"
-    "   -     - - - - -       "
-    "| |       |    . .  |   |"
-    "       -           -     "
-    "|      X      |   |X    |"
-    "     - -  -      - - -   "
-    "|.|        .| |  .      |"
-    "   - - - -               "
-    "|    .|.    |  .|    .  |"
-    "   - - - -     - - -     "
-    "|.         .           .|"
-    " - - - - - - - - - - - - ";
-    
+    //const char layout1[] =
+    //" - - - - - - - - - - - - "
+    //"|        O             .|"
+    //"   -     - - - - -       "
+    //"| |       |    . .  |   |"
+    //"       -           -     "
+    //"|      X      |   |X    |"
+    //"     - -  -      - - -   "
+    //"|.|        .| |  .      |"
+    //"   - - - -               "
+    //"|    .|.    |  .|    .  |"
+    //"   - - - -     - - -     "
+    //"|.         .           .|"
+    //" - - - - - - - - - - - - ";
+
+    const int h = layout.size();
+    int w = INT_MAX;
+    for (int j=0; j<h; j++)
+        w = bigfx::min(layout[j].Len(), w);
+    m_tile_dim = ivec2(w/2, h/2);
+
     ivec2 layout_dim = ivec2((m_tile_dim.x * 2 + 1), (m_tile_dim.y * 2 + 1));
-    BB_ASSERT(sizeof(layout1) == (layout_dim.x * layout_dim.y + 1));
-    
     m_tiles.resize(m_tile_dim.x * m_tile_dim.y);
     m_tile_balls.resize(m_tile_dim.x * m_tile_dim.y);
     m_ghost_starts.clear();
@@ -104,16 +126,16 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
             int iL = 1 + 2*i;
             PmTile& tile = GetTile(i, j);
             PmTileBall& tile_ball = GetTileBall(i, j);
-            char val = layout1[jL * layout_dim.x + iL];
+            char val = layout[jL][iL];
             if (val == 'O')
                 m_hero_start = ivec2(i, j);
             else if (val == 'X')
                 m_ghost_starts.push_back( ivec2(i, j) );
 
-            tile.m_left     = layout1[jL * layout_dim.x + (iL - 1)] == '|' ? 0 : 1;
-            tile.m_right    = layout1[jL * layout_dim.x + (iL + 1)] == '|' ? 0 : 1;
-            tile.m_up       = layout1[(jL - 1) * layout_dim.x + iL] == '-' ? 0 : 1;
-            tile.m_down     = layout1[(jL + 1) * layout_dim.x + iL] == '-' ? 0 : 1;
+            tile.m_left     = layout[jL][(iL - 1)] == '|' ? 0 : 1;
+            tile.m_right    = layout[jL][(iL + 1)] == '|' ? 0 : 1;
+            tile.m_up       = layout[(jL - 1)][iL] == '-' ? 0 : 1;
+            tile.m_down     = layout[(jL + 1)][iL] == '-' ? 0 : 1;
             
             tile_ball.m_big       = val == '.' ? 1 : 0;
             tile_ball.m_center    = 1;
@@ -133,12 +155,6 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         m_ghosts[i]->m_shader_param[0].x = (float)i;
         m_ghosts[i]->m_shader_param[0].y = (float)0;
     }
-    
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileWall]);
-    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tiles.size() * sizeof(PmTile), (GLvoid*)m_tiles.Data(), GL_STATIC_DRAW );
-
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall]);
-    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_balls.Data(), GL_STATIC_DRAW );
 }
 
 void CoPmLevel::GetLevelBounds(vec2& bmin, vec2& bmax) const
@@ -153,8 +169,8 @@ ivec2 CoPmLevel::GetTileCoord(vec2 pos, vec2& frac_xy)
     int iy = (int)pos.y;
     frac_xy = vec2(pos.x - (float)ix, pos.y - (float)iy);
     
-	int i = bigball::clamp(ix, 0, m_tile_dim.x - 1);
-	int j = bigball::clamp(iy, 0, m_tile_dim.y - 1);
+	int i = bigfx::clamp(ix, 0, m_tile_dim.x - 1);
+	int j = bigfx::clamp(iy, 0, m_tile_dim.y - 1);
     
 	return ivec2(i, j);
 }
@@ -191,7 +207,11 @@ void CoPmLevel::OnControllerInput( Camera* camera, ControllerInput const& input 
 
 void CoPmLevel::Destroy()
 {
-    
+    bgfx::destroy(m_u_tile_dim);
+    bgfx::destroy(m_tile_shader);
+    bgfx::destroy(m_ball_shader);
+    DestroyBuffers();
+
 	Super::Destroy();
 }
 
@@ -247,6 +267,7 @@ void CoPmLevel::Tick( TickContext& tick_ctxt )
 
 void CoPmLevel::_Render( RenderContext& render_ctxt )
 {
+    //return;
 #if 0
     u8vec4 col_white = u8vec4(255,255,255,255);
     u8vec4 col_red = u8vec4(255,0,0,255);
@@ -256,165 +277,137 @@ void CoPmLevel::_Render( RenderContext& render_ctxt )
     DrawUtils::GetStaticInstance()->PushSegment(vec3(0,0,0), vec3(0,0, 5), col_white, col_white);
 #endif
     
-    glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    mat4 cam_to_world_mat(render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale());
-    mat4 view_mat = bigball::inverse(cam_to_world_mat);
+    //mat4 cam_to_world_mat(render_ctxt.m_view.m_transform.GetRotation(), render_ctxt.m_view.m_transform.GetTranslation(), (float)render_ctxt.m_view.m_transform.GetScale());
+    //mat4 view_mat = bigfx::inverse(cam_to_world_mat);
     mat4 world_mat(quat(1.f), vec3(0.f, 0.f, 0.f), 1.f);
-    
-    // Render tiles
-    Shader* shader = m_tile_shader;
 
-    shader->Bind();
+    // tiles
     {
-        ShaderUniform uni_world = shader->GetUniformLocation("world_mat");
-        shader->SetUniform( uni_world, world_mat );
-        ShaderUniform uni_proj = shader->GetUniformLocation("proj_mat");
-        shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
-        ShaderUniform uni_view = shader->GetUniformLocation("view_mat");
-        shader->SetUniform( uni_view, view_mat );
-        ShaderUniform uni_dim_x = shader->GetUniformLocation("tile_dim_x");
-        shader->SetUniform( uni_dim_x, m_tile_dim.x );
-        
-        glBindVertexArray( m_varrays[eVATiles] );
-        
-        //glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBShapeMat]);
-        //glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_shape_matrices.size() * sizeof(mat4), (GLvoid*)m_shape_matrices.Data(), GL_DYNAMIC_DRAW );
-        
-        //glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileData]);
-        //glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_shape_params.size() * sizeof(Draw::InstanceParams), (GLvoid*)m_shape_params.Data(), GL_DYNAMIC_DRAW );
-        
-        //glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileData]);
-        //glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_instances.size() * sizeof(PmDrawTileInstance), (GLvoid*)m_tile_draw_instances.Data(), GL_STATIC_DRAW );
-        
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glDrawElementsInstanced( GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0, m_tiles.size() );
-        
-        glBindVertexArray(0);
-    }
-    shader->Unbind();
+        bgfx::setTransform(&world_mat.v0);
+        bgfx::setViewTransform(0, &render_ctxt.m_view_mat.v0, &render_ctxt.m_proj_mat.v0);
 
-    
-    // Render balls
-    if (m_need_ball_redraw)
-    {
-        m_need_ball_redraw = false;
-        glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall]);
-        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_balls.size() * sizeof(PmTileBall), (GLvoid*)m_tile_balls.Data(), GL_STATIC_DRAW );
-    }
-    
-    shader = m_ball_shader;
-    shader->Bind();
-    {
-        ShaderUniform uni_world = shader->GetUniformLocation("world_mat");
-        shader->SetUniform( uni_world, world_mat );
-        ShaderUniform uni_proj = shader->GetUniformLocation("proj_mat");
-        shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
-        ShaderUniform uni_view = shader->GetUniformLocation("view_mat");
-        shader->SetUniform( uni_view, view_mat );
-        ShaderUniform uni_dim_x = shader->GetUniformLocation("tile_dim_x");
-        shader->SetUniform( uni_dim_x, m_tile_dim.x );
-        
-        glBindVertexArray( m_varrays[eVABalls] );
+        vec4 tile_dim4((float)m_tile_dim.x, (float)m_tile_dim.y, 0.f, 0.f);
+        bgfx::setUniform(m_u_tile_dim, &tile_dim4);
 
-        glDrawElementsInstanced( GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0, m_tile_balls.size() );
-        
-        glBindVertexArray(0);
+        const uint32 instance_stride = sizeof(vec4);
+        uint32 num_tiles = m_tiles.size();
+        uint32 avail_tiles = bgfx::getAvailInstanceDataBuffer(num_tiles, instance_stride);
+        if (num_tiles <= avail_tiles)
+        {
+            bgfx::InstanceDataBuffer idb;
+            bgfx::allocInstanceDataBuffer(&idb, num_tiles, instance_stride);
+            vec4* data = (vec4*)idb.data;
+
+            for (uint32 ii = 0; ii < num_tiles; ++ii)
+            {
+                data[ii].x = m_tiles[ii].m_dir[0];
+                data[ii].y = m_tiles[ii].m_dir[1];
+                data[ii].z = m_tiles[ii].m_dir[2];
+                data[ii].w = m_tiles[ii].m_dir[3];
+            }
+
+            // Set vertex and index buffer.
+            bgfx::setVertexBuffer(0, m_vbh_quad);
+            bgfx::setIndexBuffer(m_ibh_quad);
+
+            // Set instance data buffer.
+            bgfx::setInstanceDataBuffer(&idb);
+
+            uint64 state = (0
+                | BGFX_STATE_WRITE_RGB
+                | BGFX_STATE_WRITE_A
+                //| BGFX_STATE_WRITE_Z
+                //| BGFX_STATE_DEPTH_TEST_LESS
+                | BGFX_STATE_BLEND_ALPHA
+                | BGFX_STATE_BLEND_NORMAL
+                | BGFX_STATE_CULL_CW
+                | BGFX_STATE_MSAA
+                );
+            bgfx::setState(state);
+            //bgfx::setState(BGFX_STATE_DEFAULT);
+            bgfx::submit(0, m_tile_shader);
+        }
     }
-    shader->Unbind();
+    
+    // balls
+    {
+        bgfx::setTransform(&world_mat.v0);
+        bgfx::setViewTransform(0, &render_ctxt.m_view_mat.v0, &render_ctxt.m_proj_mat.v0);
+
+        vec4 tile_dim4((float)m_tile_dim.x, (float)m_tile_dim.y, 0.f, 0.f);
+        bgfx::setUniform(m_u_tile_dim, &tile_dim4);
+
+        const uint32 instance_stride = sizeof(vec4);
+        uint32 num_balls = m_tile_balls.size();
+        uint32 avail_balls = bgfx::getAvailInstanceDataBuffer(num_balls, instance_stride);
+        if (num_balls <= avail_balls)
+        {
+            bgfx::InstanceDataBuffer idb;
+            bgfx::allocInstanceDataBuffer(&idb, num_balls, instance_stride);
+            vec4* data = (vec4*)idb.data;
+
+            for (uint32 ii = 0; ii < num_balls; ++ii)
+            {
+                data[ii].x = m_tile_balls[ii].m_big;
+                data[ii].y = m_tile_balls[ii].m_center;
+                data[ii].z = m_tile_balls[ii].m_right;
+                data[ii].w = m_tile_balls[ii].m_down;
+            }
+
+            // Set vertex and index buffer.
+            bgfx::setVertexBuffer(0, m_vbh_quad);
+            bgfx::setIndexBuffer(m_ibh_quad);
+
+            // Set instance data buffer.
+            bgfx::setInstanceDataBuffer(&idb);
+
+            uint64 state = (0
+                | BGFX_STATE_WRITE_RGB
+                | BGFX_STATE_WRITE_A
+                //| BGFX_STATE_WRITE_Z
+                //| BGFX_STATE_DEPTH_TEST_LESS
+                | BGFX_STATE_BLEND_ALPHA
+                | BGFX_STATE_BLEND_NORMAL
+                | BGFX_STATE_CULL_CW
+                | BGFX_STATE_MSAA
+                );
+            bgfx::setState(state);
+
+            //bgfx::setState(BGFX_STATE_DEFAULT);
+            bgfx::submit(0, m_ball_shader);
+        }
+    }
 }
 
 void CoPmLevel::LoadShaders()
 {
-    m_tile_shader = GfxManager::GetStaticInstance()->LoadShader( "tile" );
-    m_ball_shader = GfxManager::GetStaticInstance()->LoadShader( "ball" );
+    m_tile_shader = loadProgram("tile_vs", "tile_fs");
+    m_ball_shader = loadProgram("ball_vs", "ball_fs");
+
+    m_u_tile_dim = bgfx::createUniform("u_tile_dim", bgfx::UniformType::Vec4);
 }
 
 void CoPmLevel::CreateBuffers()
 {
-    glGenVertexArrays( eVACount, m_varrays );
-    glGenBuffers( eVBCount, m_vbuffers );
-    
-    
-    //////////////////////////////////////////////////////////
     // tile quad
-    const vec2 tile_vertices[] = { vec2(0.f,0.f), vec2(1.f,0.f), vec2(1.f,1.f), vec2(0.f,1.f) };
-    
-    GLuint idx_data[] = {
+    static vec2 tile_vertices[] = { vec2(0.f,0.f), vec2(1.f,0.f), vec2(1.f,1.f), vec2(0.f,1.f) };
+    static uint16 idx_data[] = {
         0,2,1, 0,3,2
     };
-    
-    glBindVertexArray( m_varrays[eVATiles] );
-    {
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBTileElt] );
-        glBufferData( GL_ELEMENT_ARRAY_BUFFER, COUNT_OF(idx_data) * sizeof(GLuint), idx_data, GL_STATIC_DRAW );
-        
-        glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTile] );
-        glBufferData( GL_ARRAY_BUFFER, COUNT_OF(tile_vertices) * sizeof(vec2), tile_vertices, GL_STATIC_DRAW );
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2) /*stride*/, (void*)0 /*offset*/ );
-        
-        //glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBShapeMat] );
-        //for (int i = 0; i < 4; i++ )
-        //{
-        //    glEnableVertexAttribArray( 1 + i );
-        //    glVertexAttribPointer( 1 + i, 4, GL_FLOAT, GL_FALSE, sizeof(mat4) /*stride*/, (void*)(sizeof(vec4) * i) /*offset*/ );
-        //    glVertexAttribDivisor( 1 + i, 1 );
-        //}
-     
 
-        uintptr_t offset_params = 0;
-        glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTileWall] );
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer( 1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(PmTile), (void*)offset_params );
-        glVertexAttribDivisor( 1, 1 );
-        offset_params += sizeof(u8vec4);
-        
-        //glBindBuffer(GL_ARRAY_BUFFER, m_vbuffers[eVBTileData]);
-        //glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_tile_draw_instances.size() * sizeof(PmDrawTileInstance), (GLvoid*)m_tile_draw_instances.Data(), GL_STATIC_DRAW );
-     
-        //glEnableVertexAttribArray(6);
-        //glVertexAttribPointer( 6, 4, GL_FLOAT, GL_FALSE, sizeof(Draw::InstanceParams) /*stride*/, (void*)offset_params );
-        //glVertexAttribDivisor( 6, 1 );
-        //offset_params += sizeof(vec4);
-        
-        //glEnableVertexAttribArray(7);
-        //glVertexAttribPointer( 7, 3, GL_FLOAT, GL_FALSE, sizeof(Draw::InstanceParams) /*stride*/, (void*)offset_params);
-        //glVertexAttribDivisor( 7, 1 );
-        
-        glBindVertexArray(0);
-        for( int attrib_idx = 0; attrib_idx < 8; attrib_idx++)
-            glDisableVertexAttribArray( attrib_idx);
-    }
-    
-    glBindVertexArray( m_varrays[eVABalls] );
-    {
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBTileElt] );
-        glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTile] );
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2) /*stride*/, (void*)0 /*offset*/ );
-        
-        uintptr_t offset_params = 0;
+    m_vbh_quad = bgfx::createVertexBuffer(bgfx::makeRef(tile_vertices, sizeof(tile_vertices)),
+        Draw::QuadVertex::ms_layout);
 
-        glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTileBall] );
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer( 1, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(PmTileBall), (void*)offset_params );
-        glVertexAttribDivisor( 1, 1 );
-        offset_params += sizeof(u8vec4);
-        
-        glBindVertexArray(0);
-        for( int attrib_idx = 0; attrib_idx < 8; attrib_idx++)
-            glDisableVertexAttribArray( attrib_idx);
-    }
-
+    m_ibh_quad = bgfx::createIndexBuffer(
+        // Static data can be passed with bgfx::makeRef
+        bgfx::makeRef(idx_data, sizeof(idx_data))
+    );
 }
 
 void CoPmLevel::DestroyBuffers()
 {
-    glDeleteBuffers( eVBCount, m_vbuffers );
-    glDeleteVertexArrays( eVACount, m_varrays );
+    bgfx::destroy(m_vbh_quad);
+    bgfx::destroy(m_ibh_quad);
 }
 
 int32 CoPmLevel::CanViewPosition(ivec2 from, ivec2 to) const
@@ -424,8 +417,8 @@ int32 CoPmLevel::CanViewPosition(ivec2 from, ivec2 to) const
         if (to.x == from.x)
             return 1;
             
-        int32 a = bigball::min(to.x, from.x);
-        int32 b = bigball::max(to.x, from.x);
+        int32 a = bigfx::min(to.x, from.x);
+        int32 b = bigfx::max(to.x, from.x);
         for(int32 t = a; t < b; t++)
         {
             if (GetTile(t, from.y).m_right == 0)
@@ -436,8 +429,8 @@ int32 CoPmLevel::CanViewPosition(ivec2 from, ivec2 to) const
     }
     else if (to.x == from.x)
     {
-        int32 a = bigball::min(to.y, from.y);
-        int32 b = bigball::max(to.y, from.y);
+        int32 a = bigfx::min(to.y, from.y);
+        int32 b = bigfx::max(to.y, from.y);
         for(int32 t = a; t < b; t++)
         {
             if (GetTile(from.x, t).m_down == 0)

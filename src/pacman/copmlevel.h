@@ -8,11 +8,11 @@
 #include "../game/colevel.h"
 #include "gfx/shader.h"
 
-namespace bigball
+namespace bigfx
 {
-	class BIGBALL_API Shader;
-	struct BIGBALL_API TickContext;
-	struct BIGBALL_API RenderContext;
+	class BIGFX_API Shader;
+	struct BIGFX_API TickContext;
+	struct BIGFX_API RenderContext;
 };
 
 class CoPmUnit;
@@ -95,29 +95,16 @@ public:
     ePmGameState        m_pending_game_state;
     float               m_state_timer;
     
-    enum eVAType
-    {
-        eVATiles = 0,
-        eVABalls,
-        eVACount
-    };
-    enum eVBType
-    {
-        eVBTile = 0,
-        eVBTileWall,
-        eVBTileBall,
-        eVBTileElt,
-        eVBCount
-    };
-    
     // rendering stuff
-    GLuint                  m_varrays[eVACount];
-    GLuint                  m_vbuffers[eVBCount];
-    Shader*                 m_tile_shader;
-    Shader*                 m_ball_shader;
+    bgfx::ProgramHandle         m_tile_shader;
+    bgfx::ProgramHandle         m_ball_shader;
+    bgfx::UniformHandle         m_u_tile_dim;
+
+    bgfx::VertexBufferHandle	m_vbh_quad;
+    bgfx::IndexBufferHandle		m_ibh_quad;
+
     bool                    m_need_ball_redraw;
     bool                    m_state_change_request;
-    
     
     void                LoadShaders();
     void                CreateBuffers();

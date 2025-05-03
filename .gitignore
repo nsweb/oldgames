@@ -1,0 +1,7 @@
+# Build files
+build/
+intermediate/
+bin/
+
+# Keep lua files
+!*.lua

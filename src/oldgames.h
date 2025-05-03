@@ -1,17 +1,10 @@
 
 #pragma once
 
-#include "targetver.h"
+#include "bigfx.h"
+#include <bx/math.h>
+#include "imgui.h"
 
-#include <stdio.h>
-#if !defined _MSC_VER
-
-#else
-#include <tchar.h>
-#endif
-
-#include "bigball.h"
-
-using namespace bigball;
+using namespace bigfx;
 
 #include "engine/ogengine.h"

@@ -18,7 +18,7 @@ public:
 
 	virtual bool		Init(EngineInitParams const& init_params) override;
 	virtual void		Shutdown() override;
-	virtual void		MainLoop() override;
+	virtual bool		MainLoop() override;
 	virtual bool		RunCommand( String const& cmd_type, Array<String> const& switches, Array<String> const& tokens ) override;
 
 	static OGEngine*	Get()		{ return ms_pengine;	}

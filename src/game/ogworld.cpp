@@ -13,17 +13,15 @@
 #include "gfx/gfxmanager.h"
 #include "gfx/shader.h"
 #include "gfx/rendercontext.h"
+#include "gfx/drawutils.h"
 #include "system/profiler.h"
-
 
 STATIC_MANAGER_CPP(OGWorld);
 
 OGWorld::OGWorld() :
     m_current_level_idx(INDEX_NONE),
     m_game_state{0},
-    m_varrays{0},
-    m_vbuffers{0},
-    m_transition_shader(nullptr)
+    m_transition_shader(BGFX_INVALID_HANDLE)
 {
 	m_pStaticInstance = this;
 }
@@ -41,6 +39,9 @@ void OGWorld::Create()
 
 void OGWorld::Destroy()
 {
+    bgfx::destroy(m_u_transition);
+    bgfx::destroy(m_transition_shader);
+
     DestroyBuffers();
 }
 
@@ -132,7 +133,7 @@ void OGWorld::RemoveComponentFromWorld( Component* component )
 
 void OGWorld::Tick( TickContext& tick_ctxt )
 {
-	PROFILE_SCOPE( __FUNCTION__ );
+	//PROFILE_SCOPE( __FUNCTION__ );
 
 	for( int32 i = 0; i < m_levels.size(); ++i )
 	{
@@ -165,7 +166,7 @@ void OGWorld::Tick( TickContext& tick_ctxt )
 
 void OGWorld::_Render( RenderContext& render_ctxt )
 {
-	PROFILE_SCOPE( __FUNCTION__ );
+	//PROFILE_SCOPE( __FUNCTION__ );
 
     for( int32 i = 0; i < m_levels.size(); ++i )
     {
@@ -180,22 +181,32 @@ void OGWorld::_Render( RenderContext& render_ctxt )
         CoUnit* unit = static_cast<CoUnit*>( level ? level->m_hero->GetCompatibleComponent("CoUnit") : nullptr );
         vec2 unit_pos = unit->GetScreenPos(render_ctxt.m_proj_mat * render_ctxt.m_view_mat);
         
-        Shader* shader = m_transition_shader;
-        shader->Bind();
         {
-            ShaderUniform uni_type = shader->GetUniformLocation("transition_type");
-            shader->SetUniform( uni_type, unit_pos );
-            ShaderUniform uni_pos = shader->GetUniformLocation("transition_pos");
-            shader->SetUniform( uni_pos, unit_pos );
-            ShaderUniform uni_time = shader->GetUniformLocation("transition_time");
-            shader->SetUniform( uni_time, m_game_state.m_transition_time );
-            
-            glBindVertexArray( m_varrays[eVATransition] );
+            bgfx::setTransform(&mat4::identity.v0);
+            bgfx::setViewTransform(0, &render_ctxt.m_view_mat.v0, &render_ctxt.m_proj_mat.v0);
 
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-            glBindVertexArray(0);
+            vec4 transition(0.f, unit_pos.x, unit_pos.y, m_game_state.m_transition_time);
+            bgfx::setUniform(m_u_transition, &transition);
+
+            // Set vertex and index buffer.
+            bgfx::setVertexBuffer(0, m_vbh_quad);
+            bgfx::setIndexBuffer(m_ibh_quad);
+
+            uint64 state = 0
+                | BGFX_STATE_WRITE_RGB
+                | BGFX_STATE_WRITE_A
+                //| BGFX_STATE_WRITE_Z
+                //| BGFX_STATE_DEPTH_TEST_LESS
+                | BGFX_STATE_BLEND_ALPHA
+                | BGFX_STATE_BLEND_NORMAL
+                | BGFX_STATE_CULL_CW
+                | BGFX_STATE_MSAA
+                ;
+            bgfx::setState(state);
+
+            //bgfx::setState(BGFX_STATE_DEFAULT);
+            bgfx::submit(0, m_transition_shader);
         }
-        shader->Unbind();
     }
 }
 
@@ -207,43 +218,30 @@ void OGWorld::RequestTransition( eTransitionType type )
 
 void OGWorld::LoadShaders()
 {
-    m_transition_shader = GfxManager::GetStaticInstance()->LoadShader( "transition" );
+    m_transition_shader = loadProgram("transition_vs", "transition_fs");
+    m_u_transition = bgfx::createUniform("u_transition", bgfx::UniformType::Vec4);
 }
 
 void OGWorld::CreateBuffers()
 {
-    glGenVertexArrays( eVACount, m_varrays );
-    glGenBuffers( eVBCount, m_vbuffers );
-    
-    
-    //////////////////////////////////////////////////////////
-    // transition quad
-    const vec2 tile_vertices[] = { vec2(-1.f,-1.f), vec2(1.f,-1.f), vec2(1.f,1.f), vec2(-1.f,1.f) };
-    
-    GLuint idx_data[] = {
+    // unit quad
+    static Draw::QuadVertex unit_vertices[] = { vec2(-1.f,-1.f), vec2(1.f,-1.f), vec2(1.f,1.f), vec2(-1.f,1.f) };
+    static uint16 idx_data[] = {
         0,1,2, 0,2,3
     };
-    
-    glBindVertexArray( m_varrays[eVATransition] );
-    {
-        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBTransitionElt] );
-        glBufferData( GL_ELEMENT_ARRAY_BUFFER, COUNT_OF(idx_data) * sizeof(GLuint), idx_data, GL_STATIC_DRAW );
-        
-        glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBTransition] );
-        glBufferData( GL_ARRAY_BUFFER, COUNT_OF(tile_vertices) * sizeof(vec2), tile_vertices, GL_STATIC_DRAW );
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2) /*stride*/, (void*)0 /*offset*/ );
-        
-        glBindVertexArray(0);
-        for( int attrib_idx = 0; attrib_idx < 8; attrib_idx++)
-            glDisableVertexAttribArray( attrib_idx);
-    }
-    
+
+    m_vbh_quad = bgfx::createVertexBuffer(bgfx::makeRef(unit_vertices, sizeof(unit_vertices)),
+        Draw::QuadVertex::ms_layout);
+
+    m_ibh_quad = bgfx::createIndexBuffer(
+        // Static data can be passed with bgfx::makeRef
+        bgfx::makeRef(idx_data, sizeof(idx_data))
+    );
 }
 
 void OGWorld::DestroyBuffers()
 {
-    glDeleteBuffers( eVBCount, m_vbuffers );
-    glDeleteVertexArrays( eVACount, m_varrays );
+    bgfx::destroy(m_vbh_quad);
+    bgfx::destroy(m_ibh_quad);
 }
 

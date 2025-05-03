@@ -1,16 +1,14 @@
 
-
-
 #ifndef OGUNITMANAGER_H
 #define OGUNITMANAGER_H
 
 #include "engine/componentmanager.h"
 
-namespace bigball
+namespace bigfx
 {
-	class BIGBALL_API Component;
-	class BIGBALL_API Shader;
-    struct BIGBALL_API RenderContext;
+	class BIGFX_API Component;
+	class BIGFX_API Shader;
+    struct BIGFX_API RenderContext;
 };
 class CoUnit;
 
@@ -30,7 +28,7 @@ public:
 	virtual void		AddComponentToWorld( Component* component );
 	virtual void		RemoveComponentFromWorld( Component* component );
 	virtual void		Tick( struct TickContext& tick_ctxt );
-    virtual void		_Render( bigball::RenderContext& render_ctxt );
+    virtual void		_Render( bigfx::RenderContext& render_ctxt );
 
 	Array<CoUnit*> const& GetUnitArray()	{ return m_units;	}
 

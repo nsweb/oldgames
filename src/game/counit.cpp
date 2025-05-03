@@ -19,9 +19,9 @@ CLASS_EQUIP_CPP(CoUnit);
 
 CoUnit::CoUnit() :
 	m_current_level(nullptr),
-	m_shader(nullptr),
+	m_unit_program(BGFX_INVALID_HANDLE),
     m_state(eUnitState::Run),
-    m_shader_param{vec4(0.f)},
+    m_shader_param{vec4(0.f), vec4(0.f)},
     m_speed(1.f)
 {
 
@@ -45,7 +45,12 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
 		{
 			String str_shader("");
 			proto->GetStringValue(shader_tok, str_shader);
-			m_shader = GfxManager::GetStaticInstance()->LoadShader(str_shader);
+
+            String vs = String::Printf("%s_vs", str_shader.c_str());
+            String fs = String::Printf("%s_fs", str_shader.c_str());
+            m_unit_program = loadProgram(vs.c_str(), fs.c_str());
+            m_u_shader_param[0] = bgfx::createUniform("u_custom_0", bgfx::UniformType::Vec4);
+            m_u_shader_param[1] = bgfx::createUniform("u_custom_1", bgfx::UniformType::Vec4);
 		}
 
 		json::TokenIdx param_tok = proto->GetToken( "speed", json::PRIMITIVE, unit_tok);
@@ -53,37 +58,32 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
 			m_speed = proto->GetFloatValue( param_tok, m_speed);        
 	}
     
-    if(m_shader)
+    // create buffers
     {
-        glGenVertexArrays( eVACount, m_varrays );
-        glGenBuffers( eVBCount, m_vbuffers );
-        
         // unit quad
-        const vec2 unit_vertices[] = { vec2(-0.5f,-0.5f), vec2(0.5f,-0.5f), vec2(0.5f,0.5f), vec2(-0.5f,0.5f) };
-        GLuint idx_data[] = {
+        static Draw::QuadVertex unit_vertices[] = { vec2(-0.5f,-0.5f), vec2(0.5f,-0.5f), vec2(0.5f,0.5f), vec2(-0.5f,0.5f) };
+        static uint16 idx_data[] = {
             0,2,1, 0,3,2
         };
-        
-        glBindVertexArray( m_varrays[eVAUnit] );
-        {
-            glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_vbuffers[eVBUnitElt] );
-            glBufferData( GL_ELEMENT_ARRAY_BUFFER, COUNT_OF(idx_data) * sizeof(GLuint), idx_data, GL_STATIC_DRAW );
-            
-            glBindBuffer( GL_ARRAY_BUFFER, m_vbuffers[eVBUnit] );
-            glBufferData( GL_ARRAY_BUFFER, COUNT_OF(unit_vertices) * sizeof(vec2), unit_vertices, GL_STATIC_DRAW );
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, sizeof(vec2) /*stride*/, (void*)0 /*offset*/ );
-            
-            glBindVertexArray(0);
-            for( int attrib_idx = 0; attrib_idx < 8; attrib_idx++)
-                glDisableVertexAttribArray( attrib_idx);
-        }
+
+        m_vbh_quad = bgfx::createVertexBuffer(bgfx::makeRef(unit_vertices, sizeof(unit_vertices)),
+            Draw::QuadVertex::ms_layout);
+
+        m_ibh_quad = bgfx::createIndexBuffer(
+            // Static data can be passed with bgfx::makeRef
+            bgfx::makeRef(idx_data, sizeof(idx_data))
+        );
     }
     
 }
 
 void CoUnit::Destroy()
 {
+    bgfx::destroy(m_vbh_quad);
+    bgfx::destroy(m_ibh_quad);
+    bgfx::destroy(m_u_shader_param[0]);
+    bgfx::destroy(m_u_shader_param[1]);
+    bgfx::destroy(m_unit_program);
 
 	Super::Destroy();
 }
@@ -106,33 +106,37 @@ void CoUnit::Tick( TickContext& tick_ctxt )
 
 void CoUnit::_Render( RenderContext& render_ctxt )
 {
-    if(!m_shader)
-        return;
-
 	CoPosition* ppos = static_cast<CoPosition*>( GetEntityComponent( CoPosition::StaticClass() ) );
     transform unit_transform = ppos->GetTransform();
 	mat4 world_mat( unit_transform.GetRotation(), unit_transform.GetTranslation(), (float)unit_transform.GetScale() );
 
-	m_shader->Bind();
+	// draw unit
 	{
-		ShaderUniform uni_world = m_shader->GetUniformLocation("world_mat");
-		m_shader->SetUniform( uni_world, world_mat );
-		ShaderUniform uni_view = m_shader->GetUniformLocation("view_mat");
-		m_shader->SetUniform( uni_view, render_ctxt.m_view_mat );
-		ShaderUniform uni_proj = m_shader->GetUniformLocation("proj_mat");
-		m_shader->SetUniform( uni_proj, render_ctxt.m_proj_mat );
-        ShaderUniform uni_time = m_shader->GetUniformLocation("custom_0");
-        m_shader->SetUniform( uni_time, m_shader_param[0] );
-        ShaderUniform uni_alpha = m_shader->GetUniformLocation("custom_1");
-        m_shader->SetUniform( uni_alpha, m_shader_param[1] );
-		
-        glBindVertexArray( m_varrays[eVAUnit] );
-        
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        
-        glBindVertexArray(0);
+        bgfx::setTransform(&world_mat.v0);
+        bgfx::setViewTransform(0, &render_ctxt.m_view_mat.v0, &render_ctxt.m_proj_mat.v0);
+
+        bgfx::setUniform(m_u_shader_param[0], &m_shader_param[0]);
+        bgfx::setUniform(m_u_shader_param[1], &m_shader_param[1]);
+
+        // Set vertex and index buffer.
+        bgfx::setVertexBuffer(0, m_vbh_quad);
+        bgfx::setIndexBuffer(m_ibh_quad);
+
+        uint64 state = 0
+            | BGFX_STATE_WRITE_RGB
+            | BGFX_STATE_WRITE_A
+            //| BGFX_STATE_WRITE_Z
+            //| BGFX_STATE_DEPTH_TEST_LESS
+            | BGFX_STATE_BLEND_ALPHA
+            | BGFX_STATE_BLEND_NORMAL
+            | BGFX_STATE_CULL_CW
+            | BGFX_STATE_MSAA
+            ;
+        bgfx::setState(state);
+        //bgfx::setState(BGFX_STATE_DEFAULT);
+
+        bgfx::submit(0, m_unit_program);
 	}
-	m_shader->Unbind();
 }
 
 vec2 CoUnit::GetScreenPos(mat4 const& view_proj)

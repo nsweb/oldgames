@@ -1,18 +1,16 @@
 
-
-
 #ifndef OGCOUNIT_H
 #define OGCOUNIT_H
 
 #include "engine/component.h"
 
 
-namespace bigball
+namespace bigfx
 {
-	class BIGBALL_API Shader;
-	struct BIGBALL_API TickContext;
-	struct BIGBALL_API RenderContext;
-    class BIGBALL_API Camera;
+	class BIGFX_API Shader;
+	struct BIGFX_API TickContext;
+	struct BIGFX_API RenderContext;
+    class BIGFX_API Camera;
     struct ControllerInput;
 };
 
@@ -45,29 +43,17 @@ public:
 
 public:
 	Entity*		m_current_level;
-	Shader*     m_shader;
+    bgfx::ProgramHandle m_unit_program;
 
     eUnitState  m_state;
     vec4        m_shader_param[2];
+    bgfx::UniformHandle m_u_shader_param[2];
+
+    bgfx::VertexBufferHandle	m_vbh_quad;
+    bgfx::IndexBufferHandle		m_ibh_quad;
 
     /** Prototype parameters */
     float       m_speed;
-    
-    enum eVAType
-    {
-        eVAUnit = 0,
-        eVACount
-    };
-    enum eVBType
-    {
-        eVBUnit = 0,
-        eVBUnitElt,
-        eVBCount
-    };
-    
-    // rendering stuff
-    GLuint		m_varrays[eVACount];
-    GLuint		m_vbuffers[eVBCount];
 };
 
 #endif // OGCOUNIT_H

@@ -7,12 +7,12 @@
 #include "engine/component.h"
 #include "gfx/shader.h"
 
-namespace bigball
+namespace bigfx
 {
-	class BIGBALL_API Shader;
-    class BIGBALL_API Camera;
-	struct BIGBALL_API TickContext;
-	struct BIGBALL_API RenderContext;
+	class BIGFX_API Shader;
+    class BIGFX_API Camera;
+	struct BIGFX_API TickContext;
+	struct BIGFX_API RenderContext;
     struct ControllerInput;
 };
 

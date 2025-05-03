@@ -70,9 +70,9 @@ void OGEngine::Shutdown()
 	Engine::Shutdown();
 }
 
-void OGEngine::MainLoop()
+bool OGEngine::MainLoop()
 {
-	Engine::MainLoop();
+	return Engine::MainLoop();
 }
 
 void OGEngine::DeclareComponentsAndEntities()

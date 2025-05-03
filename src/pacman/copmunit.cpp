@@ -5,16 +5,9 @@
 #include "copmlevel.h"
 
 #include "core/json.h"
-//#include "system/file.h"
 #include "engine/coposition.h"
 #include "engine/controller.h"
-//#include "engine/camera.h"
 #include "engine/tickcontext.h"
-//#include "engine/entitymanager.h"
-//#include "gfx/gfxmanager.h"
-//#include "gfx/shader.h"
-//#include "gfx/rendercontext.h"
-//#include "gfx/drawutils.h"
 
 CLASS_EQUIP_CPP(CoPmUnit);
 
@@ -98,7 +91,7 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
     
     if (m_hero)
     {
-        float angle = 40.0 * F_PI / 180.0 * (0.5 + 0.5 * bigball::sin(8.0*global_time));
+        float angle = 40.0f * F_PI / 180.0f * (0.5f + 0.5f * (float)bigfx::sin(8.0*global_time));
         m_shader_param[0].x = angle;
     }
     else
@@ -106,7 +99,7 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
         if (m_current_level->GetGameState() == ePmGameState::GhostFlee)
         {
             float timer = m_current_level->GetGameStateTimer();
-            m_shader_param[0].y = 0.6 + 0.4f * bigball::cos(12.f * F_2_PI * timer);
+            m_shader_param[0].y = 0.6f + 0.4f * (float)bigfx::cos(12.f * F_2_PI * timer);
         }
         else if (m_current_level->GetGameState() == ePmGameState::HeroDie)
         {
@@ -118,7 +111,7 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
         }
         
         static float ghost_time = 0.f;
-        ghost_time = bigball::fmod(ghost_time + tick_ctxt.m_delta_seconds, 32.f);
+        ghost_time = bigfx::fmod(ghost_time + tick_ctxt.m_delta_seconds, 32.f);
         m_shader_param[0].w = ghost_time;
     }
     
@@ -143,7 +136,7 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
         // check whether we are not moving anymore
         if (m_move_vector == vec2::zero)
         {
-            int32 dir_idx = bigball::rand() % 4;
+            int32 dir_idx = bigfx::rand() % 4;
             for (int32 i = 0; i < 4; i++)
             {
                 const int32 d = (dir_idx + i) & 3;
@@ -157,7 +150,7 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
         // otherwise if we have changed tile, we can try to switch direction
         else if (tile_coord != m_last_tile_coord)
         {
-            int32 d = bigball::rand() % 4;
+            int32 d = bigfx::rand() % 4;
             
             // if target is in view, try to follow it instead
             if (m_target)
@@ -284,8 +277,8 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
     unit_pos.y -= m_move_vector.y * dmove;
     
     // check walls
-    float dx = bigball::fract(unit_pos.x) - 0.5f;
-    float dy = bigball::fract(unit_pos.y) - 0.5f;
+    float dx = bigfx::fract(unit_pos.x) - 0.5f;
+    float dy = bigfx::fract(unit_pos.y) - 0.5f;
     if (m_move_vector.x < 0.f && !tile.m_left && dx <= 0.0f)
     {
         unit_pos.x -= dx;
