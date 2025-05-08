@@ -5,7 +5,7 @@
 	#include <bgfx_shader.sh>
 #endif
 
-uniform vec4 u_custom_0; // ghost id, alpha, z, w
+uniform vec4 u_custom_0; // ghost id, alpha, ghost dir x, ghost dir y
 uniform vec4 u_custom_1; 
 
 #define PI 3.1415926536
@@ -30,36 +30,30 @@ void main()
 	// ghost
     vec2 p = v_fs_coord;
     vec3 base_col = hsv2rgb(palette(u_custom_0.x*0.05));
-    vec4 rgba = vec4(0,0,0,0);
-    
-    // left eye
-    if(length((p - vec2(-0.1, -0.1))*vec2(1.5, 1.0)) < 0.1)
-    {
-        float l = pow(smoothstep(0.0, 0.06, length(p - vec2(-0.1, -0.075))), 8);
-        rgba = vec4(l, l, l, u_custom_0.y);
-    }
-    // right eye
-    else if(length((p - vec2(0.1, -0.1))*vec2(1.5, 1.0)) < 0.1)
-    {
-        float l = pow(smoothstep(0.0, 0.06, length(p - vec2(0.1, -0.075))), 8);
-        rgba = vec4(l, l, l, u_custom_0.y);
-    }
-    else
-    {
-        const float dsphere = 0.3;
-        float d = length(p) - dsphere;
+
+    const float dsphere = 0.3;
+    float d = length(p) - dsphere;
+    float bx = max(p.x - dsphere, -p.x - dsphere);
+    float by = max(p.y - dsphere, -p.y);
+    d = min(max(bx, by), d);
+    d = max( d, p.y + cos(p.x * 32.0 - 2.0*u_custom_0.w) * 0.03 - 0.27 );
         
-        float bx = max(p.x - dsphere, -p.x - dsphere);
-        float by = max(p.y - dsphere, -p.y);
-        d = min(max(bx, by), d);
-        
-        p.y += cos(p.x * 32.0 - 2.0*u_custom_0.w) * 0.05;
-        d = max( d, p.y - 0.3 );
-        
-        float l = smoothstep(-0.01, 0.01, d);
-        vec3 col = mix(vec3(1,1,1), base_col, max(1, 0.1 + u_custom_0.y));
-        rgba = mix(vec4(col, u_custom_0.y), vec4(0,0,0,0), l);
-    }
+    float l = smoothstep(-0.01, 0.01, d);
+    vec3 col = mix(vec3(1,1,1), base_col, max(1, 0.1 + u_custom_0.y));
+    vec4 rgba = mix(vec4(col, u_custom_0.y), vec4(0,0,0,0), l);
+
+    // eye
+    vec2 pe = vec2(abs(p.x), p.y);
+    d = length((pe - vec2(0.1, -0.1))*vec2(1.5, 1.0)) - 0.09;
+    l = smoothstep(0.0, 0.02, d);
+    rgba.rgb = mix(vec3(1,1,1), rgba.rgb, l);
+
+    // eyeball
+    vec2 peb = vec2(abs(p.x - 0.025), p.y);
+    //vec2 peb = vec2(abs(p.x - u_custom_0.z), p.y - u_custom_0.w);
+    d = length(peb - vec2(0.1, -0.075)) - 0.03;
+    l = smoothstep(0.0, 0.02, d);
+    rgba.rgb = mix(vec3(0,0,0), rgba.rgb, l);
     
     gl_FragColor = rgba;
 }

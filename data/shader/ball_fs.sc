@@ -8,28 +8,23 @@ void main()
     // balls
     const float dball = 0.05;
     const float dbigball = 0.12;
-    float d = 2;
-    vec4 ball_color = vec4(1,1,1,1);
+    vec2 p = v_fs_coord;
     
-    if (v_fs_bcrd.y > 0)   // center
-    {
-        if (v_fs_bcrd.x > 0)
-        {
-            d = length(v_fs_coord - vec2(0.25, 0.25)) - dbigball;
-            if (d < 0.0)
-            {
-                gl_FragColor = vec4(1,1,0.6,1);
-                return;
-            }
-        }
-        else
-            d = length(v_fs_coord - vec2(0.25, 0.25)) - dball;
-    }
-    
-    if (v_fs_bcrd.z > 0)   // right
-        d = min(d, length(v_fs_coord - vec2(0.75, 0.25)) - dball);
-    if (v_fs_bcrd.w > 0)   // down
-        d = min(d, length(v_fs_coord - vec2(0.25, 0.75)) - dball);
-    
-    gl_FragColor = (d < 0.0 ? ball_color : vec4(0,0,0,0));
+    // center
+    float d = length(p - vec2(0.25, 0.25)) - mix(dball, dbigball, v_fs_bcrd.x) + 1 - v_fs_bcrd.y;
+    float l = smoothstep(0, 0.02, d);
+    vec3 colc = mix(vec3(1,1,1), vec3(1,1,0.6), v_fs_bcrd.x);
+    vec4 rgba = mix(vec4(colc,1), vec4(0,0,0,0), l);
+
+    // right
+    d = length(p - vec2(0.75, 0.25)) - dball + 1 - v_fs_bcrd.z;
+    l = smoothstep(0, 0.02, d);
+    rgba.rgb = mix(vec3(1,1,1), rgba.rgb, l);
+
+    // down
+    d = length(p - vec2(0.25, 0.75)) - dball + 1 - v_fs_bcrd.w;
+    l = smoothstep(0, 0.02, d);
+    rgba.rgb = mix(vec3(1,1,1), rgba.rgb, l);
+
+    gl_FragColor = rgba;
 }
