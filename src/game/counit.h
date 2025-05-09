@@ -17,6 +17,7 @@ namespace bigfx
 enum class eUnitState
 {
     Run = 0,
+	Dead,
     Edit,
 };
 

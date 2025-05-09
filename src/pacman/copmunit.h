@@ -32,9 +32,9 @@ public:
     ivec2       m_last_tile_coord;
     vec2        m_input_vector;
 	vec2        m_move_vector;
+	float		m_move_time;
     int32       m_hero;
     int32       m_initial_life;
-    bool        m_is_weak;
     
     CoPmLevel*  m_current_level;
 };

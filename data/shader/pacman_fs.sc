@@ -5,8 +5,8 @@
 	#include <bgfx_shader.sh>
 #endif
 
-uniform vec4 u_custom_0; // angle
-uniform vec4 u_custom_1;
+uniform vec4 u_custom_0; // angle, ?, ?, dead
+uniform vec4 u_custom_1; // move x, move y
 
 #define PI 3.1415926536
 
@@ -23,7 +23,8 @@ void main()
     vec2 ndn = vec2(sf, cf);
     d = max(d, min(dot(p, nup), dot(p, ndn)));
     float l = smoothstep(0, 0.02, d);
-    vec4 rgba = mix(vec4(1,0.9,0.1,1), vec4(0,0,0,0), l);
+    vec3 col = mix(vec3(1,0.9,0.1), vec3(1,0.3,0.05), u_custom_0.w);
+    vec4 rgba = mix(vec4(col,1), vec4(0,0,0,0), l);
 
     gl_FragColor = rgba;
 }

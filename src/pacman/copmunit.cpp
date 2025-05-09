@@ -17,10 +17,10 @@ CoPmUnit::CoPmUnit() :
     m_last_tile_coord(-1, -1),
     m_input_vector(0.f,0.f),
 	m_move_vector(0.f,0.f),
+    m_move_time(0.f),
     m_current_level(nullptr),
     m_hero(0),
-    m_initial_life(0),
-    m_is_weak(false)
+    m_initial_life(0)
 {
 
 }
@@ -78,41 +78,51 @@ void CoPmUnit::BeginPlay(CoPmLevel* level, bool new_game)
     m_shader_param[0].y = 1.f; // alpha
     m_input_vector = vec2::zero;
     m_move_vector = vec2::zero;
-    m_is_weak = false;
 }
 
 void CoPmUnit::Tick( TickContext& tick_ctxt )
 {
 	Super::Tick(tick_ctxt);
     
-    static float global_time = 0.f;
     if (m_move_vector.x != 0.f || m_move_vector.y != 0.f)
-        global_time += tick_ctxt.m_delta_seconds;
+        m_move_time += tick_ctxt.m_delta_seconds;
     
-    if (m_hero)
+    // Update shader params
     {
-        float angle = 40.0f * F_PI / 180.0f * (0.5f + 0.5f * (float)bigfx::sin(8.0*global_time));
-        m_shader_param[0].x = angle;
-    }
-    else
-    {
-        if (m_current_level->GetGameState() == ePmGameState::GhostFlee)
+        if (m_hero)
         {
-            float timer = m_current_level->GetGameStateTimer();
-            m_shader_param[0].y = 0.6f + 0.4f * (float)bigfx::cos(12.f * F_2_PI * timer);
-        }
-        else if (m_current_level->GetGameState() == ePmGameState::HeroDie)
-        {
-            m_shader_param[0].y = 0.f;
+            // Hero mouth angle
+            float angle = 40.0f * F_PI / 180.0f * (0.5f + 0.5f * (float)bigfx::sin(32.0 * m_move_time));
+            m_shader_param[0].x = angle;
         }
         else
         {
-            m_shader_param[0].y = 1.f;
+            // Ghost shader params
+            //      m_shader_param[0] : ghost id, blip, flee, dead
+            //      m_shader_param[1] : move x, move y, wave time
+            m_shader_param[0].z = 0.f;
+            if (m_current_level->GetGameState() == ePmGameState::GhostFlee)
+            {
+                float timer = m_current_level->GetGameStateTimer();
+                m_shader_param[0].y = timer > 3.f ? 1.f : (0.5f + 0.5f*(float)bigfx::cos(12.f * F_2_PI * timer));
+                m_shader_param[0].z = 1.f;
+            }
+            else if (m_current_level->GetGameState() == ePmGameState::HeroDie)
+            {
+                //m_shader_param[0].y = 0.f;
+            }
+            else // ePmGameState::Run
+            {
+                //m_shader_param[0].y = 1.f;
+                m_shader_param[0].z = 0.f;
+            }
+
+            float ghost_wave_time = bigfx::fmod(4.f * m_move_time, 32.f);
+            m_shader_param[1].z = ghost_wave_time;
         }
-        
-        static float ghost_time = 0.f;
-        ghost_time = bigfx::fmod(ghost_time + tick_ctxt.m_delta_seconds, 32.f);
-        m_shader_param[0].w = ghost_time;
+
+        m_shader_param[0].w = (m_state == eUnitState::Dead ? 1.f : 0.f);
+        m_shader_param[1].xy = m_move_vector;
     }
     
     if (m_current_level->GetGameState() == ePmGameState::HeroDie)
@@ -129,7 +139,7 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
     PmTile& tile = m_current_level->GetTile(tile_coord.x, tile_coord.y);
     PmTileBall& tile_ball = m_current_level->GetTileBall(tile_coord.x, tile_coord.y);
     
-    // ai logic
+    // ghost ai logic
     if (!m_hero )
     {
         const vec2 dir_input[4] = { vec2(-1, 0), vec2(1, 0), vec2(0,1), vec2(0, -1) };
@@ -217,22 +227,28 @@ void CoPmUnit::Tick( TickContext& tick_ctxt )
         
         if (ball_eaten > 0)
             m_current_level->NeedBallRedraw();
+
+        m_state = eUnitState::Run;
     }
     else
     {
-        // ai logic : check collision
-        if (tile_coord == m_target->m_last_tile_coord)
+        // ghost ai logic : check collision
+        const float coll_margin = 0.45f;
+        CoPosition* cotargetpos = static_cast<CoPosition*>(m_target->GetEntityComponent("CoPosition"));
+        vec3 target_pos = cotargetpos->GetPosition();
+        vec3 dpos = unit_pos - target_pos;
+        if(bigfx::abs(dpos.x) < 1.f - coll_margin && bigfx::abs(dpos.y) < 1.f - coll_margin)
         {
             if (m_current_level->GetGameState() == ePmGameState::Run)
             {
+                m_target->m_state = eUnitState::Dead;
                 m_current_level->RequestGameStateChange(ePmGameState::HeroDie);
             }
             else if (m_current_level->GetGameState() == ePmGameState::GhostFlee)
             {
-                m_is_weak = true;
+                m_state = eUnitState::Dead;
             }
         }
-        
     }
     
     // check if we can consume any input
