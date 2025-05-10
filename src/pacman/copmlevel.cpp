@@ -19,7 +19,7 @@ CLASS_EQUIP_CPP(CoPmLevel);
 CoPmLevel::CoPmLevel() :
     m_tile_shader(BGFX_INVALID_HANDLE),
     m_ball_shader(BGFX_INVALID_HANDLE),
-    m_need_ball_redraw(false),
+    m_last_ball_eaten(false),
     m_state_change_request(false),
     m_current_game_state(ePmGameState::Run),
     m_pending_game_state(ePmGameState::Run),
@@ -64,17 +64,17 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
 
     Array<String> layout {
     " - - - - - - - - - - - - ",
-    "|     |      O   .     .|",
+    "|     |      X   .     .|",
     "   -     - -   - -       ",
-    "| |       |    . .  |X  |",
-    "     - -           -     ",
-    "|   |X X   X      |     |",
-    "     - -  -      - - -   ",
-    "|.|       | |    .      |",
+    "| |       |    .    |   |",
+    "     - = -   -     -     ",
+    "|   |1 2 1|   |   |     |",
+    "     - - -       - - -   ",
+    "| |      .| | |         |",
     "   - - - -               ",
     "|    .|.    |  .|    .  |",
     "   - - - -     - - -     ",
-    "|. X     X . X         .|",
+    "|.         .           .|",
     " - - - - - - - - - - - - "};
     
     //const char layout1[] =
@@ -116,7 +116,26 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
     ivec2 layout_dim = ivec2((m_tile_dim.x * 2 + 1), (m_tile_dim.y * 2 + 1));
     m_tiles.resize(m_tile_dim.x * m_tile_dim.y);
     m_tile_balls.resize(m_tile_dim.x * m_tile_dim.y);
+    m_tile_sinks.resize(m_tile_dim.x * m_tile_dim.y);
     m_ghost_starts.clear();
+
+    auto EdgeFunc = [](uint8 t)
+    {
+        switch (t)
+        {
+        case '|':
+        case '-':
+            return PmTile::eEdgeType::Wall;
+        case '"':
+        case '=':
+            return PmTile::eEdgeType::GhostSink;
+        case '{':
+        case '}':
+        case '¨':
+            return PmTile::eEdgeType::Portal;
+        };
+        return PmTile::eEdgeType::None;
+    };
 
     for(int j = 0; j < m_tile_dim.y; j++)
     {
@@ -124,36 +143,138 @@ void CoPmLevel::Create( Entity* owner, class json::Object* proto )
         for(int i = 0; i < m_tile_dim.x; i++)
         {
             int iL = 1 + 2*i;
+            int tile_type = 0;
             PmTile& tile = GetTile(i, j);
             PmTileBall& tile_ball = GetTileBall(i, j);
             char val = layout[jL][iL];
-            if (val == 'O')
+            if (val == 'X')
+            {
                 m_hero_start = ivec2(i, j);
-            else if (val == 'X')
-                m_ghost_starts.push_back( ivec2(i, j) );
-
-            tile.m_left     = layout[jL][(iL - 1)] == '|' ? 0 : 1;
-            tile.m_right    = layout[jL][(iL + 1)] == '|' ? 0 : 1;
-            tile.m_up       = layout[(jL - 1)][iL] == '-' ? 0 : 1;
-            tile.m_down     = layout[(jL + 1)][iL] == '-' ? 0 : 1;
+            }
+            else if (val >= '0' && val <= '9')
+            {
+                int ghost_count = (int)(val - '0');
+                m_ghost_starts.push_back(ivec3(i, j, ghost_count));
+                tile_type |= PmTile::TypeSink;
+            }
+            
+            tile.m_left     = EdgeFunc( layout[jL][(iL - 1)] );
+            tile.m_right    = EdgeFunc( layout[jL][(iL + 1)] );
+            tile.m_up       = EdgeFunc( layout[(jL - 1)][iL] );
+            tile.m_down     = EdgeFunc( layout[(jL + 1)][iL] );
+            tile.m_type     = tile_type;
             
             tile_ball.m_big       = val == '.' ? 1 : 0;
             tile_ball.m_center    = 1;
-            tile_ball.m_right     = tile.m_right;
-            tile_ball.m_down      = tile.m_down;
+            tile_ball.m_right     = (tile.m_right == PmTile::eEdgeType::None ? 1 : 0);
+            tile_ball.m_down      = (tile.m_down == PmTile::eEdgeType::None ? 1 : 0);
+
+            if ((tile_type & PmTile::TypeSink) != 0)
+            {
+                tile_ball.m_data = 0;
+            }
+        }
+    }
+
+    // sinks
+    {
+        Array<ivec2> sink_opens;
+        sink_opens.reserve(m_tile_dim.x* m_tile_dim.y);
+        for (int j = 0; j < m_tile_dim.y; j++)
+        {
+            for (int i = 0; i < m_tile_dim.x; i++)
+            {
+                PmTileSink& tile_sink = GetTileSink(i, j);
+                tile_sink.m_data = 0;
+
+                const PmTile& tile = GetTile(i, j);
+                for (int ii = 0; ii < 4; ii++)
+                {
+                    if (tile.m_dir[ii] == PmTile::eEdgeType::GhostSink)
+                    {
+                        tile_sink.m_dir[ii] = 1;
+                        sink_opens.push_back(ivec2(i, j));
+                        break;
+                    }
+                }
+            }
+        }
+        for (int k = 0; k < sink_opens.size(); k++)
+        {
+            ivec2 ij = sink_opens[k];
+            const PmTile& tile = GetTile(ij.x, ij.y);
+            PmTileSink& tile_sink = GetTileSink(ij.x, ij.y);
+
+            // Check tile neighbors
+            if (ij.x > 0)
+            {
+                PmTile& tile_left = GetTile(ij.x - 1, ij.y);
+                if (tile_left.m_right != PmTile::eEdgeType::Wall)
+                {
+                    PmTileSink& tile_sink_left = GetTileSink(ij.x - 1, ij.y);
+                    if (tile_sink_left.m_data == 0) // has tile already been tagged ?
+                    {
+                        tile_sink_left.m_right = 1;
+                        sink_opens.push_back(ivec2(ij.x - 1, ij.y));
+                    }
+                }
+            }
+            if (ij.y > 0)
+            {
+                PmTile& tile_up = GetTile(ij.x, ij.y - 1);
+                if (tile_up.m_down != PmTile::eEdgeType::Wall)
+                {
+                    PmTileSink& tile_sink_up = GetTileSink(ij.x, ij.y - 1);
+                    if (tile_sink_up.m_data == 0) // has tile already been tagged ?
+                    {
+                        tile_sink_up.m_down = 1;
+                        sink_opens.push_back(ivec2(ij.x, ij.y - 1));
+                    }
+                }
+            }
+            if (ij.x < m_tile_dim.x - 1)
+            {
+                if (tile.m_right != PmTile::eEdgeType::Wall)
+                {
+                    PmTileSink& tile_sink_right = GetTileSink(ij.x + 1, ij.y);
+                    if (tile_sink_right.m_data == 0) // has tile already been tagged ?
+                    {
+                        tile_sink_right.m_left = 1;
+                        sink_opens.push_back(ivec2(ij.x + 1, ij.y));
+                    }
+                }
+            }
+            if (ij.y < m_tile_dim.y - 1)
+            {
+                if (tile.m_down != PmTile::eEdgeType::Wall)
+                {
+                    PmTileSink& tile_sink_down = GetTileSink(ij.x, ij.y + 1);
+                    if (tile_sink_down.m_data == 0) // has tile already been tagged ?
+                    {
+                        tile_sink_down.m_up = 1;
+                        sink_opens.push_back(ivec2(ij.x, ij.y + 1));
+                    }
+                }
+            }
         }
     }
     
     String ghost_name;
-    m_ghosts.resize(m_ghost_starts.size());
+    m_ghosts.clear();
+    int gidx = 0;
     for(int i = 0; i < m_ghost_starts.size(); i++)
     {
-        ghost_name = String::Printf("ghost_%d", i);
-        Entity* ent_ghost = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/ghost.json", ghost_name.c_str());
-        m_ghosts[i] = static_cast<CoPmUnit*>( ent_ghost->GetComponent("CoPmUnit") );
-        m_ghosts[i]->m_start_pos = m_ghost_starts[i];
-        m_ghosts[i]->m_shader_param[0].x = (float)i;
-        m_ghosts[i]->m_shader_param[0].y = (float)0;
+        const int ghost_count = m_ghost_starts[i].z;
+        for (int g = 0; g < ghost_count; g++, gidx++)
+        {
+            ghost_name = String::Printf("ghost_%d", gidx);
+            Entity* ent_ghost = EntityManager::GetStaticInstance()->CreateEntityFromJson("../data/pacman/ghost.json", ghost_name.c_str());
+            CoPmUnit* ghost = static_cast<CoPmUnit*>(ent_ghost->GetComponent("CoPmUnit"));
+            ghost->m_start_pos = m_ghost_starts[i].xy;
+            ghost->m_shader_param[0].x = (float)i;
+            ghost->m_shader_param[0].y = (float)0;
+            m_ghosts.push_back(ghost);
+        }
     }
 }
 
@@ -188,11 +309,16 @@ void CoPmLevel::BeginPlay(bool new_game)
         hero_unit->BeginPlay(this, new_game);
     }
 
-    for(int i = 0; i < m_ghosts.size(); i++)
+    int gidx = 0;
+    for (int i = 0; i < m_ghost_starts.size(); i++)
     {
-        m_ghosts[i]->m_start_pos = m_ghost_starts[i];
-        m_ghosts[i]->m_target = hero_unit;
-        m_ghosts[i]->BeginPlay(this, new_game);
+        const int ghost_count = m_ghost_starts[i].z;
+        for (int g = 0; g < ghost_count; g++, gidx++)
+        {
+            m_ghosts[gidx]->m_start_pos = m_ghost_starts[i].xy;
+            m_ghosts[gidx]->m_target = hero_unit;
+            m_ghosts[gidx]->BeginPlay(this, new_game);
+        }
     }
 }
 
@@ -300,10 +426,10 @@ void CoPmLevel::_Render( RenderContext& render_ctxt )
 
             for (uint32 ii = 0; ii < num_tiles; ++ii)
             {
-                data[ii].x = m_tiles[ii].m_dir[0];
-                data[ii].y = m_tiles[ii].m_dir[1];
-                data[ii].z = m_tiles[ii].m_dir[2];
-                data[ii].w = m_tiles[ii].m_dir[3];
+                data[ii].x = (uint8)m_tiles[ii].m_dir[0];
+                data[ii].y = (uint8)m_tiles[ii].m_dir[1];
+                data[ii].z = (uint8)m_tiles[ii].m_dir[2];
+                data[ii].w = (uint8)m_tiles[ii].m_dir[3];
             }
 
             // Set vertex and index buffer.
@@ -421,7 +547,7 @@ int32 CoPmLevel::CanViewPosition(ivec2 from, ivec2 to) const
         int32 b = bigfx::max(to.x, from.x);
         for(int32 t = a; t < b; t++)
         {
-            if (GetTile(t, from.y).m_right == 0)
+            if (GetTile(t, from.y).m_right == PmTile::eEdgeType::Wall)
                 return INDEX_NONE;
         }
         return to.x > from.x ? 1 /*right*/ : 0 /*left*/;
@@ -433,7 +559,7 @@ int32 CoPmLevel::CanViewPosition(ivec2 from, ivec2 to) const
         int32 b = bigfx::max(to.y, from.y);
         for(int32 t = a; t < b; t++)
         {
-            if (GetTile(from.x, t).m_down == 0)
+            if (GetTile(from.x, t).m_down == PmTile::eEdgeType::Wall)
                 return INDEX_NONE;
         }
         return to.y > from.y ? 3 /*down*/ : 2 /*up*/;

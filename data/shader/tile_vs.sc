@@ -1,6 +1,6 @@
 
 $input a_position, i_data0
-$output v_fs_lrud, v_fs_coord, v_color0
+$output v_fs_lrud, v_fs_coord
 
 uniform vec4 u_tile_dim;
 
@@ -15,7 +15,6 @@ void main()
     vec4 view_pos = mul(u_modelView, position);
     gl_Position = mul(u_proj, view_pos);
     
-    v_color0 = vec4(0.0, 0.0, 1.0, 1.0);
     v_fs_lrud = i_data0;
     v_fs_coord = a_position.xy;
 }

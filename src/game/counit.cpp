@@ -74,7 +74,6 @@ void CoUnit::Create( Entity* owner, class json::Object* proto )
             bgfx::makeRef(idx_data, sizeof(idx_data))
         );
     }
-    
 }
 
 void CoUnit::Destroy()

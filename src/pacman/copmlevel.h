@@ -1,6 +1,3 @@
-
-
-
 #ifndef COPMLEVEL_H
 #define COPMLEVEL_H
 
@@ -19,6 +16,46 @@ class CoPmUnit;
 
 struct PmTile
 {
+    enum class eEdgeType : uint8
+    {
+        None = 0,
+        Portal,
+        Wall,
+        GhostSink,
+    };
+    static constexpr int TypeSink = 1;
+
+    union
+    {
+        struct
+        {
+            eEdgeType	m_left;
+            eEdgeType	m_right;
+            eEdgeType	m_up;
+            eEdgeType	m_down;
+        };
+        eEdgeType       m_dir[4];
+    };
+    int  m_type;
+};
+
+struct PmTileBall
+{
+    union
+    {
+        struct
+        {
+            uint8   m_big;
+            uint8   m_center;
+            uint8   m_right;
+            uint8   m_down;
+        };
+        uint32      m_data;
+    };
+};
+
+struct PmTileSink
+{
     union
     {
         struct
@@ -29,15 +66,8 @@ struct PmTile
             uint8	m_down;
         };
         uint8       m_dir[4];
+        uint32      m_data;
     };
-};
-
-struct PmTileBall
-{
-    uint8   m_big;
-    uint8   m_center;
-    uint8   m_right;
-    uint8   m_down;
 };
 
 enum class ePmGameState : uint32
@@ -72,9 +102,11 @@ public:
     PmTile&             GetTile(int i, int j)       { return m_tiles[m_tile_dim.x * j + i]; }
     PmTile const&       GetTile(int i, int j) const { return m_tiles[m_tile_dim.x * j + i]; }
     PmTileBall&         GetTileBall(int i, int j)   { return m_tile_balls[m_tile_dim.x * j + i]; }
+    PmTileSink&         GetTileSink(int i, int j)   { return m_tile_sinks[m_tile_dim.x * j + i]; }
 	ivec2               GetTileCoord(vec2 pos, vec2& frac_xy);
     
-    void                NeedBallRedraw()            { m_need_ball_redraw = true; }
+    void                SetBallEatenAtPos(const vec2& pos)  { m_last_ball_eaten_pos = pos; m_last_ball_eaten = true; }
+    void                ResetBallEaten()                    { m_last_ball_eaten = false; }
     int32               CanViewPosition(ivec2 from, ivec2 to) const;
     int32               ReverseDir(int32 dir) const;
     
@@ -85,9 +117,11 @@ public:
 public:
     ivec2               m_tile_dim;
     ivec2               m_hero_start;
-    Array<ivec2>        m_ghost_starts;
+    Array<ivec3>        m_ghost_starts;
     Array<PmTile>       m_tiles;
     Array<PmTileBall>   m_tile_balls;
+    // field representing closest sink directions
+    Array<PmTileSink>   m_tile_sinks;
     Array<CoPmUnit*>    m_ghosts;
     
     // game state
@@ -103,8 +137,9 @@ public:
     bgfx::VertexBufferHandle	m_vbh_quad;
     bgfx::IndexBufferHandle		m_ibh_quad;
 
-    bool                    m_need_ball_redraw;
-    bool                    m_state_change_request;
+    vec2                m_last_ball_eaten_pos;
+    bool                m_last_ball_eaten;
+    bool                m_state_change_request;
     
     void                LoadShaders();
     void                CreateBuffers();
