@@ -37,7 +37,7 @@ solution "oldgames"
 		targetname "oldgames"
 
 		defines { "_CRT_SECURE_NO_WARNINGS", "_WINDOWS", "JSMN_STATIC", "BX_CONFIG_DEBUG=1", "ENTRY_CONFIG_IMPLEMENT_MAIN=1" }
-		flags { "NoPCH", "NoNativeWChar", "NoEditAndContinue", "StaticRuntime", "NoExceptions" }
+		flags { "NoPCH", "NoEditAndContinue", "StaticRuntime", "NoExceptions" }
 
 		local bimgpath = bigfxpath .. "/3rdparty/bimg"
 		local bxpath = bigfxpath .. "/3rdparty/bx"
@@ -59,8 +59,9 @@ solution "oldgames"
             bimgpath .. "/include",
             projpath .. "/data/shader" }
 
-			configuration "windows"	
+		configuration "windows"
 			links { "bigfx" }--, "glew32", "sdl2", "sdl2main", "opengl32"}
+			buildoptions { "/std:c++latest", "/Zc:__cplusplus", "/Zc:preprocessor" }
 
 		configuration {"windows", "Debug"}
 			links { "bgfxDebug", "bimgDebug", "bimg_encodeDebug", "bimg_decodeDebug", "bxDebug", "example-commonDebug", "example-glueDebug"}
@@ -90,8 +91,5 @@ solution "oldgames"
 			defines { "NDEBUG" }
 			flags { "Optimize", "Symbols"}
 
-		configuration "macosx"
-            linkoptions  { "-std=c++11" } 
-            buildoptions { "-std=c++11" }
 			
 
